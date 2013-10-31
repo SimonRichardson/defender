@@ -1,23 +1,22 @@
-var helpers = require('fantasy-helpers'),
-    combinators = require('fantasy-combinators'),
-    Option = require('fantasy-options'),
+var IO = require('fantasy-io'),
 
     defender = require('../defender').defender,
     normaliser = require('../defender').normaliser,
 
-    ap = combinators.apply,
-    compose = combinators.compose,
-
-    Some = Option.Some,
-    None = Option.None,
-
-    whitespace = /^\s/;
+    readInput = function() {
+        return IO(function() {
+            /* This is just for now. */
+            return '1 1 - 2 2 - 3 3';
+        });
+    };
 
 exports.defender = {
     'testing': function(test) {
 
         var defend = defender('##-##-##'),
-            value = normaliser(whitespace)('1 1 - 2 2 - 3 3');
+            value = normaliser(/^\s/)(readInput());
+
+        console.log(value.unsafePerform());
 
         defend(value).fold(
             function(errors) {

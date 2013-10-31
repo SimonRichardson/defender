@@ -1,7 +1,10 @@
 var combinators = require('fantasy-combinators'),
+    IO = require('fantasy-io'),
+    State = require('fantasy-states'),
 
     ap = combinators.apply,
     compose = combinators.compose,
+    constant = combinators.constant,
     
     dimap = function(a, b) {
         return function(c) {
@@ -44,12 +47,25 @@ var combinators = require('fantasy-combinators'),
             return a.test(b);
         };
     },
-    
+
     normalise = function(regexp) {
-        var predicate = compose(not)(test(regexp));
-        return ap(
-            every(filter(predicate))
-        );
+        return function(f) {
+            var M = State.StateT(IO),
+
+                predicate = compose(not)(test(regexp)),
+                clean = ap(every(filter(predicate))),
+
+                program =
+                    M.lift(f)
+                    .chain(compose(M.modify)(
+                        function(a) {
+                            return constant(clean(a));
+                        }
+                    ))
+                    .chain(constant(M.get));
+
+            return program.exec('');
+        };
     };
 
 exports = module.exports = normalise;
