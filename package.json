@@ -1,0 +1,28 @@
+{
+    "name": "defender",
+    "description": "Defending inputs across the land.",
+    "author": "Simon Richardson <stickupkid@gmail.com> (https://github.com/SimonRichardson)",
+    "homepage": "https://github.com/SimonRichardson/defender",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/SimonRichardson/fantasy-world.git"
+    },
+    "dependencies": {
+        "fantasy-io": "0.0.x",
+        "fantasy-options": "0.0.x",
+        "fantasy-helpers": "0.0.x",
+        "fantasy-combinators": "0.0.x"
+    },
+    "devDependencies": {
+        "grunt-cli": "0.1.9",
+        "grunt": "0.4.x",
+        "grunt-contrib-jshint": "0.6.x",
+        "grunt-contrib-nodeunit": "0.2.0"
+    },
+    "scripts": {
+        "test": "grunt"
+    },
+    "main": "src/server.js",
+    "version": "0.0.1"
+}
