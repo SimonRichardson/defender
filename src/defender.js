@@ -4,7 +4,8 @@ var Validation = require('fantasy-validations'),
     Failure = Validation.Failure;
 
 function defender(pattern) {
-    return function(x) {
+
+    return function(io) {
         
         return Failure(['n/a']);
     };

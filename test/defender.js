@@ -1,7 +1,10 @@
 var IO = require('fantasy-io'),
 
-    defender = require('../defender').defender,
-    normaliser = require('../defender').normaliser,
+    defenders = require('../defenders'),
+
+    defender = defenders.defender,
+    guardian = defenders.guardian,
+    soothsayer = defenders.soothsayer,
 
     readInput = function() {
         return IO(function() {
@@ -10,13 +13,23 @@ var IO = require('fantasy-io'),
         });
     };
 
+/*
+1. split pattern
+2. create regexp - verbal or similar?
+3. zip with index
+4. run through io value unit we match
+5. report on where failure occured
+*/
+
 exports.defender = {
     'testing': function(test) {
 
-        var defend = defender('##-##-##'),
-            value = normaliser(/^\s/)(readInput());
-
-        console.log(value.unsafePerform());
+        var sayer = soothsayer({
+                '#': /^[0-9]/,
+                '-': /^-/
+            })('##-##-##'),
+            defend = defender(sayer),
+            value = guardian(/^\s/)(readInput());
 
         defend(value).fold(
             function(errors) {
