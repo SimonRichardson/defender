@@ -10,6 +10,8 @@ var helpers = require('fantasy-helpers'),
     Some = Option.Some,
     None = Option.None,
 
+    whitespace = /^\s/,
+
     dimap = function(a, b) {
         return function(c) {
             return compose(compose(b)(c))(a);
@@ -32,27 +34,36 @@ var helpers = require('fantasy-helpers'),
             var accum = [],
                 i;
             for(i = 0;  i < x.length; i++) {
-                if (f(x[i])) accum.push(x[i]);
+                if (f(x[i]))
+                    accum.push(x[i]);
             }
             return accum;
         };
     },
-    normaliser = function(f) {
+    every = function(f) {
         return function(x) {
-            var list = dimap(split(''), join(''));
-            return list(f)(x);
+            return dimap(split(''), join(''))(f)(x);
         };
+    },
+    not = function(a) {
+        return !a;
+    },
+    test = function(a) {
+        return function(b) {
+            return a.test(b);
+        };
+    },
+    norm = function(x) {
+        var noneWhitespace = compose(not)(test(whitespace));
+        return ap(
+            every(filter(noneWhitespace))
+        )(x);
     };
 
 exports.defender = {
     'testing': function(test) {
 
         var defend = defender('##-##-##'),
-            norm = ap(normaliser(filter(
-                function(x) {
-                    return !/\s/.test(x);
-                }
-            ))),
             value = norm('1 1 - 2 2 - 3 3');
 
         defend(value).fold(
