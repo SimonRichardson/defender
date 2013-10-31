@@ -1,6 +1,9 @@
 var IO = require('fantasy-io'),
+    combinators = require('fantasy-combinators'),
 
     defenders = require('../defenders'),
+
+    constant = combinators.constant,
 
     defender = defenders.defender,
     guardian = defenders.guardian,
@@ -11,19 +14,17 @@ var IO = require('fantasy-io'),
             /* This is just for now. */
             return '1 1 - 2 2 - 3 3';
         });
+    },
+
+    isSuccess = function(a) {
+        return a.fold(
+            constant(false),
+            constant(true)
+        );
     };
 
-/*
-1. split pattern
-2. create regexp - verbal or similar?
-3. zip with index
-4. run through io value unit we match
-5. report on where failure occured
-*/
-
-exports.defender = {
-    'testing': function(test) {
-
+exports.defenders = {
+    'when testing the defenders against a sort code should return correct value': function(test) {
         var sayer = soothsayer({
                 '#': /^[0-9]/,
                 '-': /^-/
@@ -31,17 +32,7 @@ exports.defender = {
             defend = defender(sayer),
             value = guardian(/^\s/)(readInput());
 
-        defend(value).unsafePerform().fold(
-            function(errors) {
-                console.log('Errors', errors);
-            },
-            function(x) {
-                console.log('Win!', x);
-            }
-        );
-
-        test.ok(true);
+        test.ok(isSuccess(defend(value).unsafePerform()));
         test.done();
     }
 };
-    
