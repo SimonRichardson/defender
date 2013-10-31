@@ -9,10 +9,15 @@ var IO = require('fantasy-io'),
     guardian = defenders.guardian,
     soothsayer = defenders.soothsayer,
 
-    readInput = function() {
+    readSortCode = function() {
         return IO(function() {
-            /* This is just for now. */
             return '1 1 - 2 2 - 3 3';
+        });
+    },
+
+    readEmail = function() {
+        return IO(function() {
+            return 'spam+dark.knight@batman.gotham.com';
         });
     },
 
@@ -30,7 +35,18 @@ exports.defenders = {
                 '-': /^-/
             })('##-##-##'),
             defend = defender(sayer),
-            value = guardian(/^\s/)(readInput());
+            value = guardian(/^\s/)(readSortCode());
+
+        test.ok(isSuccess(defend(value).unsafePerform()));
+        test.done();
+    },
+    'when testing the defenders against a email should return correct value': function(test) {
+        var sayer = soothsayer({
+                '_': /^[^@]+/,
+                '@': /^@/
+            })('_@_'),
+            defend = defender(sayer),
+            value = guardian(/^\s/)(readEmail());
 
         test.ok(isSuccess(defend(value).unsafePerform()));
         test.done();
