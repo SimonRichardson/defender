@@ -1,3 +1,7 @@
-var defender = require('./src/defender');
+var defender = require('./src/defender'),
+    normaliser = require('./src/normaliser');
 
-exports = module.exports = defender;
+exports = module.exports = {
+    defender: defender,
+    normaliser: normaliser
+};
