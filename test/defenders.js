@@ -9,6 +9,12 @@ var IO = require('fantasy-io'),
     guardian = defenders.guardian,
     soothsayer = defenders.soothsayer,
 
+    runes = defenders.runes,
+
+    anythingBut = runes.anythingBut,
+    range = runes.range,
+    then = runes.then,
+
     readSortCode = function() {
         return IO(function() {
             return '1 1 - 2 2 - 3 3';
@@ -17,7 +23,7 @@ var IO = require('fantasy-io'),
 
     readEmail = function() {
         return IO(function() {
-            return 'spam+dark.knight@batman.gotham.com';
+            return 'dark.knight+spam@batman.gotham.com';
         });
     },
 
@@ -31,8 +37,8 @@ var IO = require('fantasy-io'),
 exports.defenders = {
     'when testing the defenders against a sort code should return correct value': function(test) {
         var sayer = soothsayer({
-                '#': /^[0-9]/,
-                '-': /^-/
+                '#': range(0, 9),
+                '-': then('-')
             })('##-##-##'),
             defend = defender(sayer),
             value = guardian(/^\s/)(readSortCode());
@@ -42,8 +48,8 @@ exports.defenders = {
     },
     'when testing the defenders against a email should return correct value': function(test) {
         var sayer = soothsayer({
-                '_': /^[^@]+/,
-                '@': /^@/
+                '_': anythingBut('@'),
+                '@': then('@')
             })('_@_'),
             defend = defender(sayer),
             value = guardian(/^\s/)(readEmail());
