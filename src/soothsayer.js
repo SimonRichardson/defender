@@ -4,9 +4,9 @@ var combinators = require('fantasy-combinators'),
     State = require('fantasy-states'),
     Tuple2 = require('fantasy-tuples').Tuple2,
 
-    ap = combinators.apply,
     compose = combinators.compose,
     constant = combinators.constant,
+    identity = combinators.identity,
 
     isSome = function(a) {
         return a.cata({
@@ -19,6 +19,23 @@ var combinators = require('fantasy-combinators'),
         return IO(function() {
             return pattern;
         });
+    },
+
+    error = function(str) {
+        return function() {
+            throw new Error(str);
+        };
+    },
+
+    extract = function() {
+        return function(a) {
+            return a.map(function(x) {
+                return x.cata({
+                    Some: identity,
+                    None: error('Invalid Option')
+                });
+            });
+        };
     },
 
     filter = function(f) {
@@ -75,6 +92,8 @@ var combinators = require('fantasy-combinators'),
                     .chain(compose(M.modify)(map(sayings)))
                     .chain(constant(M.get))
                     .chain(compose(M.modify)(filter(isSome)))
+                    .chain(constant(M.get))
+                    .chain(compose(M.modify)(extract))
                     .chain(constant(M.get))
                     .chain(compose(M.modify)(zipWithIndex))
                     .chain(constant(M.get));

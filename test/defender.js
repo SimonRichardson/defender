@@ -31,12 +31,12 @@ exports.defender = {
             defend = defender(sayer),
             value = guardian(/^\s/)(readInput());
 
-        defend(value).fold(
+        defend(value).unsafePerform().fold(
             function(errors) {
-                console.log('Failure', errors);
+                console.log('Errors', errors);
             },
-            function(result) {
-                console.log('Success', result);
+            function(x) {
+                console.log('Win!', x);
             }
         );
 
