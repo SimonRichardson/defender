@@ -1,10 +1,11 @@
 <!doctype html>
 <html>
   <head>
-    <title>Match with squishy-pants.js</title>
+    <title>Form Validation Using defenders.js</title>
     <meta charset="utf-8" />
     <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.min.css" rel="stylesheet">
-    <script src="../defender.browser.js"></script>
+    <script src="../defenders.browser.js"></script>
+    <script src="js/io.browser.js"></script>
     <script>
       function event(element, name, callback) {
           if(element.addEventListener) {
@@ -15,13 +16,83 @@
       }
 
       event(window, 'load', function() {
-          
+          var defender = defenders.defender,
+              guardian = defenders.guardian,
+              soothsayer = defenders.soothsayer,
+
+              runes = defenders.runes,
+
+              anythingBut = runes.anythingBut,
+              range = runes.range,
+              then = runes.then;
+
+          function readSortCode() {
+              return IO(function() {
+                  return document.getElementById('sort-code').value;
+              });
+          }
+
+          function show(x) {
+              return 'Sort Code : ' + x;
+          }
+
+          function error(x) {
+              return 'Error at ' + x._3 + ' with possible character `' + x._1 + '`';
+          }
+
+          function output(x) {
+              x.cata({
+                  Success: function(value) {
+                      document.getElementById('output').innerHTML = show(value);
+                      document.getElementById('output').className = 'alert alert-success';
+                  },
+                  Failure: function(errors) {
+                      if (errors[0]._1 === '') {
+                          document.getElementById('output').innerHTML = '';
+                          document.getElementById('output').className = 'alert';
+                          return;
+                      }
+
+                      var html = '', i;
+                      for(i = 0; i < errors.length; i++) {
+                          html += '<li>' + error(errors[i]) + '</li>';
+                      }
+                      document.getElementById('output').innerHTML = '<ul>' + html + '</ul>';
+                      document.getElementById('output').className = 'alert alert-error';
+                  }
+              });
+          }
+
+          function onKeyUp(f) {
+              return function() {
+                  var sayer = soothsayer({
+                      '#': range(0, 9),
+                      '-': then('-')
+                  })('##-##-##'),
+                  defend = defender(sayer),
+                  value = guardian(/^\s/)(readSortCode());
+
+                  f(defend(value).unsafePerform());
+              };
+          }
+
+          event(document.getElementById('sort-code'), 'keyup', onKeyUp(output));
       });
     </script>
   </head>
   <body>
     <div class="container">
       <div class="row">
+        <div class="span6 offset3">
+          <h1>Form Validation Using defenders.js</h1>
+          <form>
+            <fieldset>
+              <legend>New Person</legend>
+              <label for="sort-code">Sortcode</label> <input id="sort-code" type="text" />
+            </fieldset>
+          </form>
+          <div class="alert" id="output"></div>
+        </div>
       </div>
     </div>
   </body>
