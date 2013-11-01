@@ -40,6 +40,13 @@ var IO = require('fantasy-io'),
     };
 
 exports.defenders = {
+    'when': function(test) {
+        var a = [1, 2, 3];
+        a.splice(1, 0, 'a');
+        console.log(a);
+        test.ok(true);
+        test.done();
+    },
     'when testing the defenders against a sort code should return correct value': function(test) {
         var sayer = soothsayer({
                 '#': range(0, 9),

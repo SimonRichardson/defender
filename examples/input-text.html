@@ -6,6 +6,8 @@
     <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.min.css" rel="stylesheet">
     <script src="../defenders.browser.js"></script>
     <script src="js/io.browser.js"></script>
+    <script src="js/states.browser.js"></script>
+    <script src="js/combinators.browser.js"></script>
     <script>
       function event(element, name, callback) {
           if(element.addEventListener) {
@@ -16,6 +18,8 @@
       }
 
       event(window, 'load', function() {
+          "use strict";
+
           var defender = defenders.defender,
               guardian = defenders.guardian,
               soothsayer = defenders.soothsayer,
@@ -24,16 +28,74 @@
 
               anythingBut = runes.anythingBut,
               range = runes.range,
-              then = runes.then;
+              then = runes.then,
 
-          function identity(x) {
-              return x;
+              identity = combinators.identity,
+              compose = combinators.compose,
+              constant = combinators.constant,
+
+              sayer = soothsayer({
+                      '#': range(0, 9),
+                      '-': then('-')
+                  })('##-##-##'),
+
+              defend = defender(sayer),
+              guard = guardian(/^\s/),
+
+              readSortCode = readTextField('sort-code'),
+              readRestrictedSortCode = readTextField('restrict-sort-code'),
+
+              readRestrictedSortCodeSelection = readTextFieldSelection('restrict-sort-code');
+
+          function dimap(a, b) {
+              return function(c) {
+                  return compose(compose(b)(c))(a);
+              };
           }
 
-          function readSortCode() {
-              return IO(function() {
-                  return document.getElementById('sort-code').value;
-              });
+          function split(a) {
+              return function(b) {
+                  return [b[0].split(a), b[1]];
+              }
+          }
+
+          function join(a) {
+              return function(b) {
+                  return [b[0].join(a), b[1]];
+              };
+          }
+
+          function replace(x) {
+              return function(b) {
+                  var values = b[0],
+                      selection = b[1],
+                      start = selection[0],
+                      possibleEnd = selection[1],
+                      end = start === possibleEnd ? start : possibleEnd;
+                  values.splice(start, end, x);
+                  return b;
+              };
+          }
+
+          function element(id) {
+              return document.getElementById(id);
+          }
+
+          function readTextField(id) {
+              return function() {
+                  return IO(function() {
+                      return element(id).value;
+                  });
+              };
+          }
+
+          function readTextFieldSelection(id) {
+              return function() {
+                  return IO(function() {
+                      var a = element(id);
+                      return [a.selectionStart, a.selectionEnd];
+                  });
+              };
           }
 
           function show(x) {
@@ -45,6 +107,7 @@
           }
 
           function output(a) {
+              // FIXME: Move this into a IO process!
               a.fold(
                   function(b) {
                       var errors = b.fold(
@@ -55,38 +118,101 @@
                       for(i = 0; i < errors.length; i++) {
                           html += '<li>' + error(errors[i]) + '</li>';
                       }
-                      document.getElementById('output').innerHTML = '<ul>' + html + '</ul>';
-                      document.getElementById('output').className = 'alert alert-error';
+                      element('output').innerHTML = '<ul>' + html + '</ul>';
+                      element('output').className = 'alert alert-error';
                   },
                   function(b) {
                       return b.fold(
                           function(a) {
-                              document.getElementById('output').innerHTML = '';
-                              document.getElementById('output').className = 'alert';
+                              element('output').innerHTML = '';
+                              element('output').className = 'alert';
                           },
                           function(value) {
-                              document.getElementById('output').innerHTML = show(value);
-                              document.getElementById('output').className = 'alert alert-success';        
+                              element('output').innerHTML = show(value);
+                              element('output').className = 'alert alert-success';        
                           }
                       );
                   }
               );
           }
 
-          function onKeyUp(f) {
-              return function() {
-                  var sayer = soothsayer({
-                      '#': range(0, 9),
-                      '-': then('-')
-                  })('##-##-##'),
-                  defend = defender(sayer),
-                  value = guardian(/^\s/)(readSortCode());
+          function onKeyDown(value, selection) {
+              var inject = function(code) {
+                      var x = String.fromCharCode(code);
+                      console.log(x, code);
+                      return function(a) {
+                          return function(b) {
+                              var list = dimap(split(''), join(''));
+                              return list(replace(x))(a);
+                          };
+                      };
+                  },
+                  together = function(a) {
+                      return function(b) {
+                          return [b, a];
+                      };
+                  },
+                  extract = function(a) {
+                      return function(b) {
+                          return b[0];
+                      }
+                  };
+              return function(e) {
+                  var M = State.StateT(IO),
 
-                  f(defend(value).unsafePerform());
+                      fortune =
+                          M.lift(value)
+                          .chain(compose(M.modify)(constant))
+                          .chain(constant(M.lift(selection)))
+                          .chain(compose(M.modify)(together))
+                          .chain(constant(M.get))
+                          .chain(compose(M.modify)(inject(e.keyCode)))
+                          .chain(constant(M.get))
+                          .chain(compose(M.modify)(extract))
+                          .chain(constant(M.get)),
+
+                      prediction = fortune.exec(''),
+                      program = defend(guard(prediction)),
+                      response = program.unsafePerform();
+
+                  // FIXME : Move this into IO
+                  response.fold(
+                      function() {
+                          e.preventDefault();
+                      },
+                      function() {
+
+                      }
+                  );
               };
           }
 
-          event(document.getElementById('sort-code'), 'keyup', onKeyUp(output));
+          function onKeyUp(io) {
+              return function() {
+                  var program = defend(guard(io));
+                  output(program.unsafePerform());
+              };
+          }
+
+          event(
+              element('sort-code'), 
+              'keyup', 
+              onKeyUp(readSortCode())
+          );
+
+          event(
+              element('restrict-sort-code'), 
+              'keydown', 
+              onKeyDown(
+                  readRestrictedSortCode(),
+                  readRestrictedSortCodeSelection()
+              )
+          );
+          event(
+              element('restrict-sort-code'), 
+              'keyup', 
+              onKeyUp(readRestrictedSortCode())
+          );
       });
     </script>
   </head>
@@ -97,8 +223,10 @@
           <h1>Form Validation Using defenders.js</h1>
           <form>
             <fieldset>
-              <legend>New Person</legend>
+              <legend>Free field</legend>
               <label for="sort-code">Sortcode</label> <input id="sort-code" type="text" />
+              <legend>Restricted field</legend>
+              <label for="restrict-sort-code">Sortcode</label> <input id="restrict-sort-code" type="text" />
             </fieldset>
           </form>
           <div class="alert" id="output"></div>
