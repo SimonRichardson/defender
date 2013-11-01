@@ -26,6 +26,10 @@
               range = runes.range,
               then = runes.then;
 
+          function identity(x) {
+              return x;
+          }
+
           function readSortCode() {
               return IO(function() {
                   return document.getElementById('sort-code').value;
@@ -40,27 +44,33 @@
               return 'Error at ' + x._3 + ' with possible character `' + x._1 + '`';
           }
 
-          function output(x) {
-              x.cata({
-                  Success: function(value) {
-                      document.getElementById('output').innerHTML = show(value);
-                      document.getElementById('output').className = 'alert alert-success';
-                  },
-                  Failure: function(errors) {
-                      if (errors[0]._1 === '') {
-                          document.getElementById('output').innerHTML = '';
-                          document.getElementById('output').className = 'alert';
-                          return;
-                      }
-
-                      var html = '', i;
+          function output(a) {
+              a.fold(
+                  function(b) {
+                      var errors = b.fold(
+                              identity,
+                              identity
+                          ),
+                          html = '', i;
                       for(i = 0; i < errors.length; i++) {
                           html += '<li>' + error(errors[i]) + '</li>';
                       }
                       document.getElementById('output').innerHTML = '<ul>' + html + '</ul>';
                       document.getElementById('output').className = 'alert alert-error';
+                  },
+                  function(b) {
+                      return b.fold(
+                          function(a) {
+                              document.getElementById('output').innerHTML = '';
+                              document.getElementById('output').className = 'alert';
+                          },
+                          function(value) {
+                              document.getElementById('output').innerHTML = show(value);
+                              document.getElementById('output').className = 'alert alert-success';        
+                          }
+                      );
                   }
-              });
+              );
           }
 
           function onKeyUp(f) {

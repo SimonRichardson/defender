@@ -27,10 +27,15 @@ var IO = require('fantasy-io'),
         });
     },
 
-    isSuccess = function(a) {
+    isSuccessful = function(a) {
         return a.fold(
             constant(false),
-            constant(true)
+            function(x) {
+                return x.fold(
+                    constant(false),
+                    constant(true)
+                );
+            }
         );
     };
 
@@ -43,7 +48,7 @@ exports.defenders = {
             defend = defender(sayer),
             value = guardian(/^\s/)(readSortCode());
 
-        test.ok(isSuccess(defend(value).unsafePerform()));
+        test.ok(isSuccessful(defend(value).unsafePerform()));
         test.done();
     },
     'when testing the defenders against a email should return correct value': function(test) {
@@ -54,7 +59,7 @@ exports.defenders = {
             defend = defender(sayer),
             value = guardian(/^\s/)(readEmail());
 
-        test.ok(isSuccess(defend(value).unsafePerform()));
+        test.ok(isSuccessful(defend(value).unsafePerform()));
         test.done();
     }
 };
