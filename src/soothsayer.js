@@ -2,7 +2,6 @@ var combinators = require('fantasy-combinators'),
     IO = require('fantasy-io'),
     Maybe = require('fantasy-options'),
     State = require('fantasy-states'),
-    Tuple2 = require('fantasy-tuples').Tuple2,
 
     compose = combinators.compose,
     constant = combinators.constant,
@@ -72,15 +71,6 @@ var combinators = require('fantasy-combinators'),
         };
     },
 
-    zipWithIndex = function() {
-        return function(b) {
-            var index = 0;
-            return b.map(function(x) {
-                return Tuple2(x, index++);
-            });
-        };
-    },
-
     soothsayer = function(sayings) {
         return function(pattern) {
             var M = State.StateT(IO),
@@ -94,8 +84,6 @@ var combinators = require('fantasy-combinators'),
                     .chain(compose(M.modify)(filter(isSome)))
                     .chain(constant(M.get))
                     .chain(compose(M.modify)(extract))
-                    .chain(constant(M.get))
-                    .chain(compose(M.modify)(zipWithIndex))
                     .chain(constant(M.get));
 
             return program.exec('');

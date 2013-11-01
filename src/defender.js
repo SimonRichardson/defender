@@ -18,27 +18,27 @@ var Validation = require('fantasy-validations'),
         var string = a;
         return function(b) {
             var accum = [],
-                tuple,
+                value,
                 match,
                 possible,
                 i;
 
             /* Re-factor this to become recursive */
             for(i = 0; i < b.length; i++) {
-                tuple = b[i];
-                possible = tuple._1.exec(string);
+                value = b[i];
+                possible = value.exec(string);
 
                 if(possible) {
                     match = possible[0];
                     string = string.slice(match.length);
                 } else {
-                    accum.push(Tuple3(string, Maybe.Some(tuple._1), tuple._2));
+                    accum.push(Tuple3(string, Maybe.Some(value), a.length - string.length));
                 }
             }
 
             /* This is to catch overflows */
             if (accum.length === 0 && string.length > 0) {
-                accum.push(Tuple3(string, Maybe.None, i));
+                accum.push(Tuple3(string, Maybe.None, string.length));
             }
             
             return Tuple2(a, accum);
