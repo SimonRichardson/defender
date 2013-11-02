@@ -70,8 +70,7 @@
                   var values = b[0],
                       selection = b[1],
                       start = selection[0],
-                      possibleEnd = selection[1],
-                      end = start === possibleEnd ? start : possibleEnd;
+                      end = selection[1] - start;
                   values.splice(start, end, x);
                   return b;
               };
@@ -179,10 +178,9 @@
                   response.fold(
                       function() {
                           e.preventDefault();
+                          output(response);
                       },
-                      function() {
-
-                      }
+                      identity
                   );
               };
           }
