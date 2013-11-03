@@ -790,7 +790,9 @@
             } else {
               position = a.length - string.length + 1;
               accum.push(Tuple3(string, Maybe.Some(value), position));
-              break;
+              if (string.length < 1)
+                break;
+              string = string.slice(1);
             }
           }
           return Tuple3(a, string, accum);
@@ -808,7 +810,7 @@
         return function (x) {
           var string = x._2, possibleErrors = x._3;
           if (possibleErrors.length < 1 && string.length > 0) {
-            return Left(createFailure(string, x._1.length));
+            return Left(createFailure(string, x._1.length - string.length + 1));
           } else if (possibleErrors.length > 0) {
             if (string.length < 1 && !containsError(possibleErrors)) {
               return Right(createFailure(string, string.length));

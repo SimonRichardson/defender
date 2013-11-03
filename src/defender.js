@@ -39,7 +39,10 @@ var Validation = require('fantasy-validations'),
                 } else {
                     position = (a.length - string.length) + 1;
                     accum.push(Tuple3(string, Maybe.Some(value), position));
-                    break;
+                    /* Let's move the string onwards */
+                    if (string.length < 1)
+                        break;
+                    string = string.slice(1);
                 }
             }
 
@@ -68,7 +71,7 @@ var Validation = require('fantasy-validations'),
             /* Re-factor this, as it's really messy */
             if (possibleErrors.length < 1 && string.length > 0) {
                 /* Check for overflows */
-                return Left(createFailure(string, x._1.length));
+                return Left(createFailure(string, (x._1.length - string.length) + 1));
 
             } else if(possibleErrors.length > 0) {
                 
