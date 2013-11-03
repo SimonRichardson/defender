@@ -126,9 +126,13 @@
                               return response;
                           });
                       };
+                  },
+                  fromUnicode = function(unicode) {
+                      var value = String.fromCharCode(parseInt(unicode.slice(1), 16));
+                      return value;
                   };
               return function(e) {
-                  var chr = String.fromCharCode(e.keyCode),
+                  var chr = fromUnicode(e.keyIdentifier),
 
                       M = State.StateT(IO),
 
