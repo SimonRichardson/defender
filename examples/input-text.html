@@ -110,20 +110,39 @@
           }
 
           function onKeyDown(value, selection) {
+              var bouncer = function(prediction) {
+                      var io = IO(constant(prediction));
+                      return defend(guard(io));
+                  },
+                  preventDefault = function(event) {
+                      return function(response) {
+                          return IO(function() {
+                              response.fold(
+                                  function() {
+                                      event.preventDefault();
+                                  },
+                                  identity
+                              );
+                              return response;
+                          });
+                      };
+                  };
               return function(e) {
                   var chr = String.fromCharCode(e.keyCode),
-                      prediction = fortune(value)(chr, selection),
-                      program = defend(guard(prediction)),
-                      response = program.unsafePerform();
 
-                  // FIXME : Move this into IO
-                  response.fold(
-                      function() {
-                          e.preventDefault();
-                          output(response);
-                      },
-                      identity
-                  );
+                      M = State.StateT(IO),
+
+                      program =
+                          M.lift(fortune(value)(chr, selection))
+                          .chain(compose(M.modify)(constant))
+                          .chain(constant(M.get))
+                          .chain(compose(M.lift)(bouncer))
+                          .chain(compose(M.modify)(constant))
+                          .chain(constant(M.get))
+                          .chain(compose(M.lift)(preventDefault(e)))
+                          .chain(compose(M.lift)(output));
+                  
+                  program.exec('').unsafePerform();
               };
           }
 
@@ -133,7 +152,7 @@
 
                       program =
                           M.lift(defend(guard(io)))
-                          .chain(compose(M.modify)(constant))                          
+                          .chain(compose(M.modify)(constant))
                           .chain(constant(M.get))
                           .chain(compose(M.lift)(output));
 
