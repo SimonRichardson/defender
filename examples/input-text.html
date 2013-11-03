@@ -21,6 +21,7 @@
           "use strict";
 
           var defender = defenders.defender,
+              fortune = defenders.fortune,
               guardian = defenders.guardian,
               soothsayer = defenders.soothsayer,
 
@@ -46,35 +47,6 @@
               readRestrictedSortCode = readTextField('restrict-sort-code'),
 
               readRestrictedSortCodeSelection = readTextFieldSelection('restrict-sort-code');
-
-          function dimap(a, b) {
-              return function(c) {
-                  return compose(compose(b)(c))(a);
-              };
-          }
-
-          function split(a) {
-              return function(b) {
-                  return [b[0].split(a), b[1]];
-              }
-          }
-
-          function join(a) {
-              return function(b) {
-                  return [b[0].join(a), b[1]];
-              };
-          }
-
-          function replace(x) {
-              return function(b) {
-                  var values = b[0],
-                      selection = b[1],
-                      start = selection[0],
-                      end = selection[1] - start;
-                  values.splice(start, end, x);
-                  return b;
-              };
-          }
 
           function element(id) {
               return document.getElementById(id);
@@ -136,41 +108,9 @@
           }
 
           function onKeyDown(value, selection) {
-              var inject = function(code) {
-                      var x = String.fromCharCode(code);
-                      console.log(x, code);
-                      return function(a) {
-                          return function(b) {
-                              var list = dimap(split(''), join(''));
-                              return list(replace(x))(a);
-                          };
-                      };
-                  },
-                  together = function(a) {
-                      return function(b) {
-                          return [b, a];
-                      };
-                  },
-                  extract = function(a) {
-                      return function(b) {
-                          return b[0];
-                      }
-                  };
               return function(e) {
-                  var M = State.StateT(IO),
-
-                      fortune =
-                          M.lift(value)
-                          .chain(compose(M.modify)(constant))
-                          .chain(constant(M.lift(selection)))
-                          .chain(compose(M.modify)(together))
-                          .chain(constant(M.get))
-                          .chain(compose(M.modify)(inject(e.keyCode)))
-                          .chain(constant(M.get))
-                          .chain(compose(M.modify)(extract))
-                          .chain(constant(M.get)),
-
-                      prediction = fortune.exec(''),
+                  var chr = String.fromCharCode(e.keyCode),
+                      prediction = fortune(value)(chr, selection),
                       program = defend(guard(prediction)),
                       response = program.unsafePerform();
 

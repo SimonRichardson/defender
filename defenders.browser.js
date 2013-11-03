@@ -51,9 +51,10 @@
       };
     }();
   require.define('/defenders.js', function (module, exports, __dirname, __filename) {
-    var defender = require('/src/defender.js', module), guardian = require('/src/guardian.js', module), soothsayer = require('/src/soothsayer.js', module), runes = require('/src/runes.js', module);
+    var defender = require('/src/defender.js', module), fortune = require('/src/fortune.js', module), guardian = require('/src/guardian.js', module), soothsayer = require('/src/soothsayer.js', module), runes = require('/src/runes.js', module);
     exports = module.exports = {
       defender: defender,
+      fortune: fortune,
       guardian: guardian,
       soothsayer: soothsayer,
       runes: runes
@@ -723,6 +724,57 @@
         };
       };
     exports = module.exports = normalise;
+  });
+  require.define('/src/fortune.js', function (module, exports, __dirname, __filename) {
+    var combinators = require('/node_modules/fantasy-combinators/combinators.js', module), IO = require('/node_modules/fantasy-io/io.js', module), State = require('/node_modules/fantasy-states/state.js', module), ap = combinators.apply, compose = combinators.compose, constant = combinators.constant, dimap = function (a, b) {
+        return function (c) {
+          return compose(compose(b)(c))(a);
+        };
+      }, split = function (a) {
+        return function (b) {
+          return [
+            b[0].split(a),
+            b[1]
+          ];
+        };
+      }, join = function (a) {
+        return function (b) {
+          return [
+            b[0].join(a),
+            b[1]
+          ];
+        };
+      }, replace = function (x) {
+        return function (b) {
+          var values = b[0], selection = b[1], start = selection[0], end = selection[1] - start;
+          values.splice(start, end, x);
+          return b;
+        };
+      }, inject = function (x) {
+        return function (a) {
+          return function (b) {
+            var list = dimap(split(''), join(''));
+            return list(replace(x))(a);
+          };
+        };
+      }, together = function (a) {
+        return function (b) {
+          return [
+            b,
+            a
+          ];
+        };
+      }, extract = function (a) {
+        return function (b) {
+          return b[0];
+        };
+      }, fortune = function (io) {
+        return function (chr, selection) {
+          var M = State.StateT(IO), fortune = M.lift(io).chain(compose(M.modify)(constant)).chain(constant(M.lift(selection))).chain(compose(M.modify)(together)).chain(constant(M.get)).chain(compose(M.modify)(inject(chr))).chain(constant(M.get)).chain(compose(M.modify)(extract)).chain(constant(M.get));
+          return fortune.exec('');
+        };
+      };
+    exports = module.exports = fortune;
   });
   require.define('/src/defender.js', function (module, exports, __dirname, __filename) {
     var Validation = require('/node_modules/fantasy-validations/validation.js', module), combinators = require('/node_modules/fantasy-combinators/combinators.js', module), IO = require('/node_modules/fantasy-io/io.js', module), Maybe = require('/node_modules/fantasy-options/option.js', module), State = require('/node_modules/fantasy-states/state.js', module), Tuples = require('/node_modules/fantasy-tuples/tuples.js', module), Either = require('/node_modules/fantasy-eithers/either.js', module), compose = combinators.compose, constant = combinators.constant, Success = Validation.Success, Failure = Validation.Failure, Left = Either.Left, Right = Either.Right, Tuple2 = Tuples.Tuple2, Tuple3 = Tuples.Tuple3, consume = function (a) {
