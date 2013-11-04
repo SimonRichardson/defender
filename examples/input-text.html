@@ -119,7 +119,7 @@
                       return defend(guard(io));
                   },
                   preventDefault = function(event) {
-                      var possibleCtrlCodes = [9, 13, 16, 17, 18, 19, 20, 27, 33, 34, 35, 36, 37, 38, 39, 40, 45];
+                      var possibleCtrlCodes = [9, 13, 27, 33, 34, 35, 36, 45];
 
                       return function(response) {
                           return IO(function() {
@@ -143,12 +143,14 @@
                           unicode = fromUnicode(e.keyIdentifier),
 
                           possibleDeleteCodes = [8, 46],
-                          possibleArrowCodes = [37, 38, 39, 40];
+                          possibleArrowCodes = [37, 38, 39, 40],
+                          possibleModifierCodes = [16, 17, 18, 20];
 
                       return IO(function() {
                           if (possibleDeleteCodes.indexOf(code) >= 0) {
                               return Left(code === 8 ? Left(code) : Right(code));
-                          } else if(possibleArrowCodes.indexOf(code) >= 0) {
+                          } else if(  possibleArrowCodes.indexOf(code) >= 0 || 
+                                      possibleModifierCodes.indexOf(code) >= 0) {
                               return Right(Left(code));
                           }
                           return Right(Right(unicode));

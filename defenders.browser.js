@@ -697,17 +697,13 @@
             a
           ];
         };
-      }, invoke = function (a) {
-        return function (b) {
-          return a(b);
-        };
       }, extract = function () {
         return function (b) {
           return b[0];
         };
       }, fortune = function (io) {
         return function (key, selection) {
-          var M = State.StateT(IO), values = M.lift(key).chain(compose(M.modify)(constant)).chain(constant(M.get)).chain(compose(M.modify)(inject)).chain(constant(M.get)), possible = values.exec(''), fortune = M.lift(io).chain(compose(M.modify)(constant)).chain(constant(M.lift(selection))).chain(compose(M.modify)(together)).chain(constant(M.get)).chain(constant(M.lift(possible))).chain(compose(M.modify)(invoke)).chain(constant(M.get)).chain(compose(M.modify)(extract)).chain(constant(M.get));
+          var M = State.StateT(IO), values = M.lift(key).chain(compose(M.modify)(constant)).chain(constant(M.get)).chain(compose(M.modify)(inject)).chain(constant(M.get)), possible = values.exec(''), fortune = M.lift(io).chain(compose(M.modify)(constant)).chain(constant(M.lift(selection))).chain(compose(M.modify)(together)).chain(constant(M.get)).chain(constant(M.lift(possible))).chain(compose(M.modify)(ap)).chain(constant(M.get)).chain(compose(M.modify)(extract)).chain(constant(M.get));
           return fortune.exec('');
         };
       };

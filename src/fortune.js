@@ -82,12 +82,6 @@ var combinators = require('fantasy-combinators'),
         };
     },
 
-    invoke = function(a) {
-        return function(b) {
-            return a(b);
-        };
-    },
-
     extract = function() {
         return function(b) {
             return b[0];
@@ -114,7 +108,7 @@ var combinators = require('fantasy-combinators'),
                     .chain(compose(M.modify)(together))
                     .chain(constant(M.get))
                     .chain(constant(M.lift(possible)))
-                    .chain(compose(M.modify)(invoke))
+                    .chain(compose(M.modify)(ap))
                     .chain(constant(M.get))
                     .chain(compose(M.modify)(extract))
                     .chain(constant(M.get));
