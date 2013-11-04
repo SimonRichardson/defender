@@ -3,7 +3,7 @@
   <head>
     <title>Form Validation Using defenders.js</title>
     <meta charset="utf-8" />
-    <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.min.css" rel="stylesheet">
+    <link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.1/css/bootstrap.min.css" rel="stylesheet">
     <script src="../defenders.browser.js"></script>
     <script src="js/io.browser.js"></script>
     <script src="js/states.browser.js"></script>
@@ -95,13 +95,13 @@
                               html += '<li>' + error(errors[i]) + '</li>';
                           }
                           element('output').innerHTML = '<ul>' + html + '</ul>';
-                          element('output').className = 'alert alert-error';
+                          element('output').className = 'alert alert-danger';
                       },
                       function(b) {
                           return b.fold(
                               function(a) {
                                   element('output').innerHTML = '';
-                                  element('output').className = 'alert';
+                                  element('output').className = '';
                               },
                               function(value) {
                                   element('output').innerHTML = show(value);
@@ -206,20 +206,41 @@
   </head>
   <body>
     <div class="container">
-      <div class="row">
-        <div class="span6 offset3">
-          <h1>Form Validation Using defenders.js</h1>
-          <form>
-            <fieldset>
-              <legend>Free field</legend>
-              <label for="sort-code">Sortcode</label> <input id="sort-code" type="text" />
-              <legend>Restricted field</legend>
-              <label for="restrict-sort-code">Sortcode</label> <input id="restrict-sort-code" type="text" />
-            </fieldset>
-          </form>
-          <div class="alert" id="output"></div>
-        </div>
+      <div class="jumbotron">
+          <h1><a href="https://github.com/SimonRichardson/defender">defenders.js</a></h1>
+          <p>Defending inputs across the land.</p>
+          <p><a href="#a-sort-code" class="btn btn-primary btn-lg" role="button">Learn more</a></p>
       </div>
+      <form>
+      <a id="a-sort-code"></a>
+      <fieldset>
+        <dl class="panel panel-default">
+          <dt class="panel-heading">
+              <h3 class="panel-title">Free field</h3>
+          </dt>
+          <dd class="panel-body">
+            <label for="sort-code">Sortcode</label> <input id="sort-code" type="text" />
+          </dd>
+        </dl>
+        <dl class="panel panel-success">
+          <dt class="panel-heading">
+              <h3 class="panel-title">Restricted field</h3>
+          </dt>
+          <dd class="panel-body">
+            <label for="restrict-sort-code">Sortcode</label> <input id="restrict-sort-code" type="text" />
+          </dd>
+        </dl>
+        <dl class="panel panel-info">
+          <dt class="panel-heading">
+              <h3 class="panel-title">Separated field</h3>
+          </dt>
+          <dd class="panel-body">
+            <label for="separated-sort-code">Sortcode</label> <input id="separated-sort-code" type="text" />
+          </dd>
+        </dl>
+      </fieldset>
+    </form>
+          <div id="output"></div>
     </div>
   </body>
 </html>
