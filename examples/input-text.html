@@ -207,24 +207,137 @@
           );
 
           function create() {
-              var node = function(type) {
+              var M = State.StateT(IO),
+                  div = function() {
+                      return IO(function() {
+                          return '<div><input type="text"/></div>';
+                      });
+                  },
+                  span = function() {
+                      return IO(function() {
+                          return '<span>-</span>';
+                      });
+                  },
+
+                  extract = function(a) {
                       return function() {
-                          return '<' + type + '></' + type + '>';
+                          return a.map(function(b) {
+                              return b.unsafePerform();
+                          });
                       };
                   },
-                  div = node('div'),
-                  span = node('span'),
 
-                  program = soothsayer({
+                  foldLeft = function(b, a, f) {
+                      var v = a,
+                          i;
+                      for(i = 0; i<b.length; i++) {
+                          v = f(v, b[i]);
+                      }
+                      return v;
+                  },
+
+                  filter = function(a, f) {
+                      var accum = [],
+                          i;
+                      for(i = 0; i<a.length; i++) {
+                          if(f(a[i])) {
+                              accum.push(a[i]);
+                          }
+                      }
+                      return accum;
+                  },
+
+                  liftedFoldLeft = function(a, f) {
+                      return function(b) {
+                          return constant(foldLeft(b, a, f));
+                      };
+                  },
+
+                  merge = function(a, b) {
+                      if(a[a.length - 1] !== b) {
+                          a.push(b);
+                      }
+                      return a;
+                  },
+
+                  output = function(a) {
+                      return IO(function() {
+                          var x = element('separated-sort-code'),
+                              y = a.map(function(y) {
+                                  x.innerHTML += y;
+                              }),
+                              b = x.getElementsByTagName('input'),
+                              c = [].slice.call(b),
+                              xx = 0,
+                              d = c.map(function(x) {
+                                  return x.setAttribute('index', xx++);
+                              });
+                      });
+                  },
+
+                  sayer = soothsayer({
                           '#': div(),
                           '-': span()
-                      })(pattern);
+                      })(pattern),
 
-              console.log(program.unsafePerform());
+                  program =
+                      M.lift(sayer)
+                      .chain(compose(M.modify)(extract))
+                      .chain(constant(M.get))
+                      .chain(compose(M.modify)(liftedFoldLeft([], merge)))
+                      .chain(constant(M.get))
+                      .chain(compose(M.lift)(output));
+
+              program.exec('').unsafePerform();
+
+              event(
+                  element('separated-sort-code'), 
+                  'keydown', 
+                  onKeyDown(
+                      function() {
+                          return IO(function() {
+                              var a = element('separated-sort-code'),
+                                  b = a.getElementsByTagName('input'),
+                                  c = [].slice.call(b),
+                                  d = c.map(function(x) {
+                                      return x.value;
+                                  }),
+                                  e = filter(d, function(x) {
+                                      return x !== '';
+                                  }),
+                                  f = foldLeft(e, '', function(a, b) {
+                                      if (a === '') return b;
+                                      return a + '-' + b;
+                                  });
+
+                              return f.length === 2 || f.length === 5 ? f + '-' : f;
+                          });
+                      }(),
+                      function() {
+                          return IO(function() {
+                              var a = document.activeElement,
+                                  b = a.getAttribute('index'),
+                                  c = parseInt(b, 10);
+                              
+                              return [(c * 3) + a.selectionStart, a.selectionEnd];
+                          });
+                      }()
+                  )
+              );
           }
-          //create();
+          create();
       });
     </script>
+    <style type="text/css">
+      #separated-sort-code div, span {
+          float: left;
+          display: inline;
+          margin-right: 5px;
+      }
+      #separated-sort-code input {
+          width: 40px;
+      }
+    </style>
   </head>
   <body>
     <div class="container">
@@ -257,7 +370,7 @@
               <h3 class="panel-title">Separated field</h3>
           </dt>
           <dd class="panel-body">
-            <label for="separated-sort-code">Sortcode</label> <input id="separated-sort-code" type="text" />
+            <label for="separated-sort-code">Sortcode</label> <div id="separated-sort-code"></div>
           </dd>
         </dl>
       </fieldset>
