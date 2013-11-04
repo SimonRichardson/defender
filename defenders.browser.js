@@ -42,17 +42,26 @@
     };
   });
   require.define('/src/runes.js', function (module, exports, __dirname, __filename) {
+    var IO = require('/node_modules/fantasy-io/io.js', module);
     function anything(a) {
-      return new RegExp('^' + a + '+');
+      return IO(function () {
+        return new RegExp('^' + a + '+');
+      });
     }
     function anythingBut(a) {
-      return new RegExp('^[^' + a + ']+');
+      return IO(function () {
+        return new RegExp('^[^' + a + ']+');
+      });
     }
     function then(a) {
-      return new RegExp('^' + a);
+      return IO(function () {
+        return new RegExp('^' + a);
+      });
     }
     function range(from, to) {
-      return new RegExp('^[' + from + '-' + to + ']');
+      return IO(function () {
+        return new RegExp('^[' + from + '-' + to + ']');
+      });
     }
     exports = module.exports = {
       anything: anything,
@@ -61,15 +70,107 @@
       range: range
     };
   });
+  require.define('/node_modules/fantasy-io/io.js', function (module, exports, __dirname, __filename) {
+    var daggy = require('/node_modules/fantasy-io/node_modules/daggy/daggy.js', module), IO = daggy.tagged('unsafePerform');
+    IO.of = function (x) {
+      return IO(function () {
+        return x;
+      });
+    };
+    IO.prototype.chain = function (g) {
+      var io = this;
+      return IO(function () {
+        return g(io.unsafePerform()).unsafePerform();
+      });
+    };
+    IO.prototype.map = function (f) {
+      return this.chain(function (a) {
+        return IO.of(f(a));
+      });
+    };
+    IO.prototype.ap = function (a) {
+      return this.chain(function (f) {
+        return a.map(f);
+      });
+    };
+    if (typeof module != 'undefined')
+      module.exports = IO;
+  });
+  require.define('/node_modules/fantasy-io/node_modules/daggy/daggy.js', function (module, exports, __dirname, __filename) {
+    (function (global, factory) {
+      'use strict';
+      if (typeof define === 'function' && define.amd) {
+        define(['exports'], factory);
+      } else if (typeof exports !== 'undefined') {
+        factory(exports);
+      } else {
+        global.daggy = {};
+        factory(global.daggy);
+      }
+    }(this, function (exports) {
+      function create(proto) {
+        function Ctor() {
+        }
+        Ctor.prototype = proto;
+        return new Ctor;
+      }
+      exports.create = create;
+      function getInstance(self, constructor) {
+        return self instanceof constructor ? self : create(constructor.prototype);
+      }
+      exports.getInstance = getInstance;
+      function tagged() {
+        var fields = [].slice.apply(arguments);
+        function wrapped() {
+          var self = getInstance(this, wrapped), i;
+          if (arguments.length != fields.length)
+            throw new TypeError('Expected ' + fields.length + ' arguments, got ' + arguments.length);
+          for (i = 0; i < fields.length; i++)
+            self[fields[i]] = arguments[i];
+          return self;
+        }
+        wrapped._length = fields.length;
+        return wrapped;
+      }
+      exports.tagged = tagged;
+      function taggedSum(constructors) {
+        var key;
+        function definitions() {
+          throw new TypeError('Tagged sum was called instead of one of its properties.');
+        }
+        function makeCata(key) {
+          return function (dispatches) {
+            var fields = constructors[key], args = [], i;
+            if (!dispatches[key])
+              throw new TypeError("Constructors given to cata didn't include: " + key);
+            for (i = 0; i < fields.length; i++)
+              args.push(this[fields[i]]);
+            return dispatches[key].apply(this, args);
+          };
+        }
+        function makeProto(key) {
+          var proto = create(definitions.prototype);
+          proto.cata = makeCata(key);
+          return proto;
+        }
+        for (key in constructors) {
+          if (!constructors[key].length) {
+            definitions[key] = makeProto(key);
+            continue;
+          }
+          definitions[key] = tagged.apply(null, constructors[key]);
+          definitions[key].prototype = makeProto(key);
+        }
+        return definitions;
+      }
+      exports.taggedSum = taggedSum;
+    }));
+  });
   require.define('/src/soothsayer.js', function (module, exports, __dirname, __filename) {
     var combinators = require('/node_modules/fantasy-combinators/combinators.js', module), IO = require('/node_modules/fantasy-io/io.js', module), Maybe = require('/node_modules/fantasy-options/option.js', module), State = require('/node_modules/fantasy-states/state.js', module), compose = combinators.compose, constant = combinators.constant, identity = combinators.identity, isSome = function (a) {
         return a.cata({
           Some: constant(true),
           None: constant(false)
-        });
-      }, create = function (pattern) {
-        return IO(function () {
-          return pattern;
         });
       }, error = function (str) {
         return function () {
@@ -111,7 +212,7 @@
         };
       }, soothsayer = function (sayings) {
         return function (pattern) {
-          var M = State.StateT(IO), program = M.lift(create(pattern)).chain(compose(M.modify)(split(''))).chain(constant(M.get)).chain(compose(M.modify)(map(sayings))).chain(constant(M.get)).chain(compose(M.modify)(filter(isSome))).chain(constant(M.get)).chain(compose(M.modify)(extract)).chain(constant(M.get));
+          var M = State.StateT(IO), program = M.lift(pattern).chain(compose(M.modify)(split(''))).chain(constant(M.get)).chain(compose(M.modify)(map(sayings))).chain(constant(M.get)).chain(compose(M.modify)(filter(isSome))).chain(constant(M.get)).chain(compose(M.modify)(extract)).chain(constant(M.get));
           return program.exec('');
         };
       };
@@ -437,102 +538,6 @@
       exports.taggedSum = taggedSum;
     }));
   });
-  require.define('/node_modules/fantasy-io/io.js', function (module, exports, __dirname, __filename) {
-    var daggy = require('/node_modules/fantasy-io/node_modules/daggy/daggy.js', module), IO = daggy.tagged('unsafePerform');
-    IO.of = function (x) {
-      return IO(function () {
-        return x;
-      });
-    };
-    IO.prototype.chain = function (g) {
-      var io = this;
-      return IO(function () {
-        return g(io.unsafePerform()).unsafePerform();
-      });
-    };
-    IO.prototype.map = function (f) {
-      return this.chain(function (a) {
-        return IO.of(f(a));
-      });
-    };
-    IO.prototype.ap = function (a) {
-      return this.chain(function (f) {
-        return a.map(f);
-      });
-    };
-    if (typeof module != 'undefined')
-      module.exports = IO;
-  });
-  require.define('/node_modules/fantasy-io/node_modules/daggy/daggy.js', function (module, exports, __dirname, __filename) {
-    (function (global, factory) {
-      'use strict';
-      if (typeof define === 'function' && define.amd) {
-        define(['exports'], factory);
-      } else if (typeof exports !== 'undefined') {
-        factory(exports);
-      } else {
-        global.daggy = {};
-        factory(global.daggy);
-      }
-    }(this, function (exports) {
-      function create(proto) {
-        function Ctor() {
-        }
-        Ctor.prototype = proto;
-        return new Ctor;
-      }
-      exports.create = create;
-      function getInstance(self, constructor) {
-        return self instanceof constructor ? self : create(constructor.prototype);
-      }
-      exports.getInstance = getInstance;
-      function tagged() {
-        var fields = [].slice.apply(arguments);
-        function wrapped() {
-          var self = getInstance(this, wrapped), i;
-          if (arguments.length != fields.length)
-            throw new TypeError('Expected ' + fields.length + ' arguments, got ' + arguments.length);
-          for (i = 0; i < fields.length; i++)
-            self[fields[i]] = arguments[i];
-          return self;
-        }
-        wrapped._length = fields.length;
-        return wrapped;
-      }
-      exports.tagged = tagged;
-      function taggedSum(constructors) {
-        var key;
-        function definitions() {
-          throw new TypeError('Tagged sum was called instead of one of its properties.');
-        }
-        function makeCata(key) {
-          return function (dispatches) {
-            var fields = constructors[key], args = [], i;
-            if (!dispatches[key])
-              throw new TypeError("Constructors given to cata didn't include: " + key);
-            for (i = 0; i < fields.length; i++)
-              args.push(this[fields[i]]);
-            return dispatches[key].apply(this, args);
-          };
-        }
-        function makeProto(key) {
-          var proto = create(definitions.prototype);
-          proto.cata = makeCata(key);
-          return proto;
-        }
-        for (key in constructors) {
-          if (!constructors[key].length) {
-            definitions[key] = makeProto(key);
-            continue;
-          }
-          definitions[key] = tagged.apply(null, constructors[key]);
-          definitions[key].prototype = makeProto(key);
-        }
-        return definitions;
-      }
-      exports.taggedSum = taggedSum;
-    }));
-  });
   require.define('/node_modules/fantasy-combinators/combinators.js', function (module, exports, __dirname, __filename) {
     function apply(f) {
       return function (x) {
@@ -710,13 +715,17 @@
     exports = module.exports = fortune;
   });
   require.define('/src/defender.js', function (module, exports, __dirname, __filename) {
-    var Validation = require('/node_modules/fantasy-validations/validation.js', module), combinators = require('/node_modules/fantasy-combinators/combinators.js', module), IO = require('/node_modules/fantasy-io/io.js', module), Maybe = require('/node_modules/fantasy-options/option.js', module), State = require('/node_modules/fantasy-states/state.js', module), Tuples = require('/node_modules/fantasy-tuples/tuples.js', module), Either = require('/node_modules/fantasy-eithers/either.js', module), compose = combinators.compose, constant = combinators.constant, Success = Validation.Success, Failure = Validation.Failure, Left = Either.Left, Right = Either.Right, Tuple2 = Tuples.Tuple2, Tuple3 = Tuples.Tuple3, consume = function (a) {
-        var string = a;
+    var Validation = require('/node_modules/fantasy-validations/validation.js', module), combinators = require('/node_modules/fantasy-combinators/combinators.js', module), IO = require('/node_modules/fantasy-io/io.js', module), Maybe = require('/node_modules/fantasy-options/option.js', module), State = require('/node_modules/fantasy-states/state.js', module), Tuples = require('/node_modules/fantasy-tuples/tuples.js', module), Either = require('/node_modules/fantasy-eithers/either.js', module), compose = combinators.compose, constant = combinators.constant, Success = Validation.Success, Failure = Validation.Failure, Left = Either.Left, Right = Either.Right, Tuple2 = Tuples.Tuple2, Tuple3 = Tuples.Tuple3, executeExpr = function (a) {
+        return function (b) {
+          return constant(b.exec(a));
+        };
+      }, consume = function (a) {
+        var string = a, M = State.StateT(IO);
         return function (b) {
           var accum = [], value, match, possible, position, i;
           for (i = 0; i < b.length; i++) {
             value = b[i];
-            possible = value.exec(string);
+            possible = M.lift(value).chain(compose(M.modify)(executeExpr(string))).chain(constant(M.get)).exec('').unsafePerform();
             if (possible) {
               match = possible[0];
               string = string.slice(match.length);

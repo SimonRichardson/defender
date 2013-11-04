@@ -1,18 +1,27 @@
+var IO = require('fantasy-io');
 
 function anything(a) {
-	return new RegExp('^' + a + '+');
+    return IO(function() {
+        return new RegExp('^' + a + '+');
+    });
 }
 
 function anythingBut(a) {
-	return new RegExp('^[^' + a + ']+');
+    return IO(function() {
+        return new RegExp('^[^' + a + ']+');
+    });
 }
 
 function then(a) {
-	return new RegExp('^' + a);
+    return IO(function() {
+        return new RegExp('^' + a);
+    });
 }
 
 function range(from, to) {
-	return new RegExp('^[' + from + '-' + to + ']');
+    return IO(function() {
+        return new RegExp('^[' + from + '-' + to + ']');
+    });
 }
 
 exports = module.exports = {

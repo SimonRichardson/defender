@@ -18,8 +18,16 @@ var Validation = require('fantasy-validations'),
     Tuple2 = Tuples.Tuple2,
     Tuple3 = Tuples.Tuple3,
 
+    executeExpr = function(a) {
+        return function(b) {
+            return constant(b.exec(a));
+        };
+    },
+
     consume = function(a) {
-        var string = a;
+        var string = a,
+            M = State.StateT(IO);
+
         return function(b) {
             var accum = [],
                 value,
@@ -28,11 +36,17 @@ var Validation = require('fantasy-validations'),
                 position,
                 i;
 
-            /* Re-factor this to become recursive */
+            /* Re-factor this to become recursive and only perform unsafe at the end */
             for(i = 0; i < b.length; i++) {
                 value = b[i];
-                possible = value.exec(string);
 
+                possible =
+                    M.lift(value)
+                    .chain(compose(M.modify)(executeExpr(string)))
+                    .chain(constant(M.get))
+                    .exec('')
+                    .unsafePerform();
+                
                 if(possible) {
                     match = possible[0];
                     string = string.slice(match.length);

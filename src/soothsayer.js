@@ -14,12 +14,6 @@ var combinators = require('fantasy-combinators'),
         });
     },
 
-    create = function(pattern) {
-        return IO(function() {
-            return pattern;
-        });
-    },
-
     error = function(str) {
         return function() {
             throw new Error(str);
@@ -76,7 +70,7 @@ var combinators = require('fantasy-combinators'),
             var M = State.StateT(IO),
 
                 program =
-                    M.lift(create(pattern))
+                    M.lift(pattern)
                     .chain(compose(M.modify)(split('')))
                     .chain(constant(M.get))
                     .chain(compose(M.modify)(map(sayings)))
