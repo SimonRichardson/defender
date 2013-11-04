@@ -7,6 +7,7 @@
     <script src="../defenders.browser.js"></script>
     <script src="js/io.browser.js"></script>
     <script src="js/states.browser.js"></script>
+    <script src="js/eithers.browser.js"></script>
     <script src="js/options.browser.js"></script>
     <script src="js/combinators.browser.js"></script>
     <script>
@@ -35,6 +36,9 @@
               Some = Options.Some,
               None = Options.None,
 
+              Left = Eithers.Left,
+              Right = Eithers.Right,
+
               identity = combinators.identity,
               compose = combinators.compose,
               constant = combinators.constant,
@@ -50,9 +54,7 @@
               readSortCode = readTextField('sort-code'),
               readRestrictedSortCode = readTextField('restrict-sort-code'),
 
-              readRestrictedSortCodeSelection = readTextFieldSelection('restrict-sort-code'),
-
-              possibleCtrlCodes = [8, 9, 13, 16, 17, 18, 19, 20, 27, 33, 34, 35, 36, 37, 38, 39, 40, 45, 46];
+              readRestrictedSortCodeSelection = readTextFieldSelection('restrict-sort-code');
 
           function element(id) {
               return document.getElementById(id);
@@ -121,11 +123,13 @@
                       return defend(guard(io));
                   },
                   preventDefault = function(event) {
+                      var possibleCtrlCodes = [9, 13, 16, 17, 18, 19, 20, 27, 33, 34, 35, 36, 37, 38, 39, 40, 45];
+
                       return function(response) {
                           return IO(function() {
                               response.fold(
                                   function() {
-                                      if (!allowKeyCode(event.keyCode)) {
+                                      if (possibleCtrlCodes.indexOf(event.keyCode) < 0) {
                                           event.preventDefault();
                                       }
                                   },
@@ -135,19 +139,30 @@
                           });
                       };
                   },
-                  fromUnicode = function(unicode) {
-                      return String.fromCharCode(parseInt(unicode.slice(1), 16));
-                  },
-                  allowKeyCode = function(code) {
-                      return possibleCtrlCodes.indexOf(code) >= 0;
+                  fromEvent = function(e) {
+                      var fromUnicode = function(unicode) {
+                              return String.fromCharCode(parseInt(unicode.slice(1), 16));
+                          },
+                          code = e.keyCode,
+                          unicode = fromUnicode(e.keyIdentifier),
+
+                          possibleDeleteCodes = [8, 46],
+                          possibleArrowCodes = [37, 38, 39, 40];
+
+                      return IO(function() {
+                          if (possibleDeleteCodes.indexOf(code) >= 0) {
+                              return Left(code === 8 ? Left(code) : Right(code));
+                          } else if(possibleArrowCodes.indexOf(code) >= 0) {
+                              return Right(Left(code));
+                          }
+                          return Right(Right(unicode));
+                      });
                   };
               return function(e) {
-                  var chr = fromUnicode(e.keyIdentifier),
-
-                      M = State.StateT(IO),
+                  var M = State.StateT(IO),
 
                       program =
-                          M.lift(fortune(value)(chr, selection))
+                          M.lift(fortune(value)(fromEvent(e), selection))
                           .chain(compose(M.modify)(constant))
                           .chain(constant(M.get))
                           .chain(compose(M.lift)(bouncer))
@@ -187,11 +202,6 @@
                   readRestrictedSortCode(),
                   readRestrictedSortCodeSelection()
               )
-          );
-          event(
-              element('restrict-sort-code'), 
-              'keyup', 
-              onKeyUp(readRestrictedSortCode())
           );
       });
     </script>

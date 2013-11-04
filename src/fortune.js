@@ -5,6 +5,7 @@ var combinators = require('fantasy-combinators'),
     ap = combinators.apply,
     compose = combinators.compose,
     constant = combinators.constant,
+    identity = combinators.identity,
 
     dimap = function(a, b) {
         return function(c) {
@@ -24,14 +25,45 @@ var combinators = require('fantasy-combinators'),
         };
     },
 
-    replace = function(x) {
+    remove = function(values) {
+        var a = values.slice();
+        return function(x, y) {
+            a.splice(x, y);
+            return a;
+        };
+    },
+
+    update = function(values) {
+        var a = values.slice();
+        return function(x, y) {
+            return function(z) {
+                a.splice(x, y, z);
+                return a;
+            };
+        };
+    },
+
+    replace = function(e) {
         return function(b) {
-            var values = b[0],
-                selection = b[1],
+            var selection = b[1],
                 start = selection[0],
-                end = selection[1] - start;
-            values.splice(start, end, x);
-            return b;
+                result = e.fold(
+                    function(x) {
+                        var a = remove(b[0]);
+                        return x.fold(
+                            constant(a(start - 1, 1)),
+                            constant(a(start, 1))
+                        );
+                    },
+                    function(x) {
+                        var a = update(b[0]);
+                        return x.fold(
+                            constant(b[0]),
+                            a(start, selection[1] - start)
+                        );
+                    }
+                );
+            return [result, selection];
         };
     },
 
@@ -39,7 +71,7 @@ var combinators = require('fantasy-combinators'),
         return function(a) {
             return function(b) {
                 var list = dimap(split(''), join(''));
-                return list(replace(x))(a);
+                return list(replace(a))(b);
             };
         };
     },
@@ -50,15 +82,30 @@ var combinators = require('fantasy-combinators'),
         };
     },
 
-    extract = function(a) {
+    invoke = function(a) {
+        return function(b) {
+            return a(b);
+        };
+    },
+
+    extract = function() {
         return function(b) {
             return b[0];
         };
     },
 
     fortune = function(io) {
-        return function(chr, selection) {
+        return function(key, selection) {
             var M = State.StateT(IO),
+
+                values =
+                    M.lift(key)
+                    .chain(compose(M.modify)(constant))
+                    .chain(constant(M.get))
+                    .chain(compose(M.modify)(inject))
+                    .chain(constant(M.get)),
+
+                possible = values.exec(''),
 
                 fortune =
                     M.lift(io)
@@ -66,7 +113,8 @@ var combinators = require('fantasy-combinators'),
                     .chain(constant(M.lift(selection)))
                     .chain(compose(M.modify)(together))
                     .chain(constant(M.get))
-                    .chain(compose(M.modify)(inject(chr)))
+                    .chain(constant(M.lift(possible)))
+                    .chain(compose(M.modify)(invoke))
                     .chain(constant(M.get))
                     .chain(compose(M.modify)(extract))
                     .chain(constant(M.get));
