@@ -1,0 +1,544 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Form Validation Using defenders.js</title>
+    <meta charset="utf-8" />
+    <link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.1/css/bootstrap.min.css" rel="stylesheet">
+    <script src="defenders.browser.js"></script>
+    <script src="js/io.browser.js"></script>
+    <script src="js/states.browser.js"></script>
+    <script src="js/eithers.browser.js"></script>
+    <script src="js/combinators.browser.js"></script>
+    <script>
+      function event(element, name, callback) {
+          if(element.addEventListener) {
+              element.addEventListener(name, callback, false);
+          } else {
+              element.attachEvent('on' + name, callback);
+          }
+      }
+
+      event(window, 'load', function() {
+          "use strict";
+
+          var defender = defenders.defender,
+              fortune = defenders.fortune,
+              guardian = defenders.guardian,
+              soothsayer = defenders.soothsayer,
+
+              runes = defenders.runes,
+
+              anythingBut = runes.anythingBut,
+              range = runes.range,
+              then = runes.then,
+
+              Left = Eithers.Left,
+              Right = Eithers.Right,
+
+              identity = combinators.identity,
+              compose = combinators.compose,
+              constant = combinators.constant,
+
+              pattern = IO(function() {
+                    return '##-##-##';
+              }),
+
+              sayer = soothsayer({
+                      '#': range(0, 9),
+                      '-': then('-')
+                  })(pattern),
+
+              defend = defender(sayer),
+              guard = guardian(/^\s/),
+
+              readSortCode = readTextField('sort-code'),
+              readRestrictedSortCode = readTextField('restrict-sort-code'),
+
+              readRestrictedSortCodeSelection = readTextFieldSelection('restrict-sort-code');
+
+          function element(id) {
+              return document.getElementById(id);
+          }
+
+          function readTextField(id) {
+              return function() {
+                  return IO(function() {
+                      return element(id).value;
+                  });
+              };
+          }
+
+          function readTextFieldSelection(id) {
+              return function() {
+                  return IO(function() {
+                      var a = element(id);
+                      return [a.selectionStart, a.selectionEnd];
+                  });
+              };
+          }
+
+          function show(x) {
+              return 'Sort Code : ' + x;
+          }
+
+          function error(x) {
+              return 'Error at ' + x._3 + ' with possible character `' + x._1 + '`';
+          }
+
+          function output(a) {
+              return IO(function(b) {
+                  /* This needs to be better */
+                  a.fold(
+                      function(b) {
+                          var errors = b.fold(
+                                  identity,
+                                  identity
+                              ),
+                              html = '', i;
+                          for(i = 0; i < errors.length; i++) {
+                              html += '<li>' + error(errors[i]) + '</li>';
+                          }
+                          element('output').innerHTML = '<ul>' + html + '</ul>';
+                          element('output').className = 'alert alert-danger';
+                      },
+                      function(b) {
+                          return b.fold(
+                              function(a) {
+                                  element('output').innerHTML = '';
+                                  element('output').className = '';
+                              },
+                              function(value) {
+                                  element('output').innerHTML = show(value);
+                                  element('output').className = 'alert alert-success';        
+                              }
+                          );
+                      }
+                  );
+              });
+          }
+
+          function onKeyDown(value, selection) {
+              var bouncer = function(prediction) {
+                      var io = IO(constant(prediction));
+                      return defend(guard(io));
+                  },
+                  preventDefault = function(event) {
+                      var possibleCtrlCodes = [9, 13, 27, 33, 34, 35, 36, 45];
+
+                      return function(response) {
+                          return IO(function() {
+                              response.fold(
+                                  function() {
+                                      if (possibleCtrlCodes.indexOf(event.keyCode) < 0) {
+                                          event.preventDefault();
+                                      }
+                                  },
+                                  identity
+                              );
+                              return response;
+                          });
+                      };
+                  },
+                  fromEvent = function(e) {
+                      var fromUnicode = function(unicode) {
+                              return String.fromCharCode(parseInt(unicode.slice(1), 16));
+                          },
+                          code = e.keyCode,
+                          unicode = fromUnicode(e.keyIdentifier),
+
+                          possibleDeleteCodes = [8, 46],
+                          possibleArrowCodes = [37, 38, 39, 40],
+                          possibleModifierCodes = [16, 17, 18, 20];
+
+                      return IO(function() {
+                          if (possibleDeleteCodes.indexOf(code) >= 0) {
+                              return Left(code === 8 ? Left(code) : Right(code));
+                          } else if(  possibleArrowCodes.indexOf(code) >= 0 || 
+                                      possibleModifierCodes.indexOf(code) >= 0) {
+                              return Right(Left(code));
+                          }
+                          return Right(Right(unicode));
+                      });
+                  };
+              return function(e) {
+                  var M = State.StateT(IO),
+
+                      program =
+                          M.lift(fortune(value)(fromEvent(e), selection))
+                          .chain(compose(M.modify)(constant))
+                          .chain(constant(M.get))
+                          .chain(compose(M.lift)(bouncer))
+                          .chain(compose(M.modify)(constant))
+                          .chain(constant(M.get))
+                          .chain(compose(M.lift)(preventDefault(e)))
+                          .chain(compose(M.lift)(output));
+                  
+                  program.exec('').unsafePerform();
+              };
+          }
+
+          function onKeyUp(io) {
+              return function() {
+                  var M = State.StateT(IO),
+
+                      program =
+                          M.lift(defend(guard(io)))
+                          .chain(compose(M.modify)(constant))
+                          .chain(constant(M.get))
+                          .chain(compose(M.lift)(output));
+
+                  program.exec('').unsafePerform();
+              };
+          }
+
+          event(
+              element('sort-code'), 
+              'keyup', 
+              onKeyUp(readSortCode())
+          );
+
+          event(
+              element('restrict-sort-code'), 
+              'keydown', 
+              onKeyDown(
+                  readRestrictedSortCode(),
+                  readRestrictedSortCodeSelection()
+              )
+          );
+
+          function create() {
+              var M = State.StateT(IO),
+                  div = function() {
+                      return IO(function() {
+                          return '<div><input type="text"/></div>';
+                      });
+                  },
+                  span = function() {
+                      return IO(function() {
+                          return '<span>-</span>';
+                      });
+                  },
+
+                  extract = function(a) {
+                      return function() {
+                          return a.map(function(b) {
+                              return b.unsafePerform();
+                          });
+                      };
+                  },
+
+                  foldLeft = function(b, a, f) {
+                      var v = a,
+                          i;
+                      for(i = 0; i<b.length; i++) {
+                          v = f(v, b[i]);
+                      }
+                      return v;
+                  },
+
+                  filter = function(a, f) {
+                      var accum = [],
+                          i;
+                      for(i = 0; i<a.length; i++) {
+                          if(f(a[i])) {
+                              accum.push(a[i]);
+                          }
+                      }
+                      return accum;
+                  },
+
+                  liftedFoldLeft = function(a, f) {
+                      return function(b) {
+                          return constant(foldLeft(b, a, f));
+                      };
+                  },
+
+                  merge = function(a, b) {
+                      if(a[a.length - 1] !== b) {
+                          a.push(b);
+                      }
+                      return a;
+                  },
+
+                  output = function(a) {
+                      return IO(function() {
+                          var x = element('separated-sort-code'),
+                              y = a.map(function(y) {
+                                  x.innerHTML += y;
+                              }),
+                              b = x.getElementsByTagName('input'),
+                              c = [].slice.call(b),
+                              xx = 0,
+                              d = c.map(function(x) {
+                                  return x.setAttribute('index', xx++);
+                              });
+                      });
+                  },
+
+                  sayer = soothsayer({
+                          '#': div(),
+                          '-': span()
+                      })(pattern),
+
+                  program =
+                      M.lift(sayer)
+                      .chain(compose(M.modify)(extract))
+                      .chain(constant(M.get))
+                      .chain(compose(M.modify)(liftedFoldLeft([], merge)))
+                      .chain(constant(M.get))
+                      .chain(compose(M.lift)(output));
+
+              program.exec('').unsafePerform();
+
+              event(
+                  element('separated-sort-code'), 
+                  'keydown', 
+                  onKeyDown(
+                      function() {
+                          return IO(function() {
+                              var a = element('separated-sort-code'),
+                                  b = a.getElementsByTagName('input'),
+                                  c = [].slice.call(b),
+                                  d = c.map(function(x) {
+                                      return x.value;
+                                  }),
+                                  e = filter(d, function(x) {
+                                      return x !== '';
+                                  }),
+                                  f = foldLeft(e, '', function(a, b) {
+                                      if (a === '') return b;
+                                      return a + '-' + b;
+                                  });
+
+                              return f.length === 2 || f.length === 5 ? f + '-' : f;
+                          });
+                      }(),
+                      function() {
+                          return IO(function() {
+                              var a = document.activeElement,
+                                  b = a.getAttribute('index'),
+                                  c = parseInt(b, 10);
+                              
+                              return [(c * 3) + a.selectionStart, a.selectionEnd];
+                          });
+                      }()
+                  )
+              );
+
+              event(
+                  element('separated-sort-code'),
+                  'keyup',
+                  function() {
+                      var a = document.activeElement,
+                          b = a.value,
+                          c = a.getAttribute('index'), 
+                          d = parseInt(c, 10),
+                          e, f;
+
+                      if (d < 2 && b.length === 2) {
+                          e = a.parentNode.parentNode.getElementsByTagName('input'),
+                          f = [].slice.call(e);
+
+                          f[d + 1].focus();
+                      }
+                  }
+              );
+          }
+          create();
+      });
+    </script>
+    <style type="text/css">
+      label {
+          margin-right: 10px;
+      }
+      .separated-sort-code div,
+      .separated-sort-code span {
+          float: left;
+          display: inline;
+          margin-right: 5px;
+      }
+      .separated-sort-code label {
+          float: left;
+          display: inline;
+          margin-right: 14px;
+      }
+      #separated-sort-code input {
+          width: 40px;
+      }
+      .well dt {
+          padding-top: 30px;
+          margin-top: 40px;
+          border-top: 1px solid #eee;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="jumbotron">
+          <h1><a href="https://github.com/SimonRichardson/defender">defenders.js</a></h1>
+          <p>Defending inputs across the land.</p>
+          <hr/>
+          <p><a href="#learn-more" class="btn btn-success btn-lg" role="button">Learn more</a></p>
+      </div>
+      <form>
+      <fieldset>
+        <dl class="panel panel-primary">
+          <dt class="panel-heading">
+              <h3 class="panel-title">Free field</h3>
+          </dt>
+          <dd class="panel-body">
+            <label for="sort-code">Sortcode</label> <input id="sort-code" type="text" />
+          </dd>
+        </dl>
+        <dl class="panel panel-primary">
+          <dt class="panel-heading">
+              <h3 class="panel-title">Restricted field</h3>
+          </dt>
+          <dd class="panel-body">
+            <label for="restrict-sort-code">Sortcode</label> <input id="restrict-sort-code" type="text" />
+          </dd>
+        </dl>
+        <dl class="panel panel-primary">
+          <dt class="panel-heading">
+              <h3 class="panel-title">Separated field</h3>
+          </dt>
+          <dd class="panel-body separated-sort-code">
+            <label for="separated-sort-code">Sortcode</label> <div id="separated-sort-code"></div>
+          </dd>
+        </dl>
+      </fieldset>
+    </form>
+    <div id="output"></div>
+    <a id="learn-more"></a>
+    <div class="well well-lg">
+      <h3>Introduction to the defenders</h2>
+      <div class="panel-body">
+        The defender library is made of a series of modules:
+        <hr />
+        <ul>
+          <li><a href="#learn-more-defender">Defender</a></li>
+          <li><a href="#learn-more-fortune">Fortune teller</a></li>
+          <li><a href="#learn-more-guardian">Guardian</a></li>
+          <li><a href="#learn-more-soothsayer">Soothsayer</a> - with runes</li>
+        </ul>
+        <hr />
+        <p>
+          This simple premise of each of this is to make working with validation 
+          for inputs a lot easier. The comprised parts a modular in nature so
+          can be composed (or not depending on the case at hand) to enable the
+          easy chaining of state through out validation.
+        </p>
+        <dl>
+          <dt><h4>Soothsayer</h4></dt>
+          <dd>
+            <a id="learn-more-soothsayer"></a>
+            <p>
+              The Soothsayer is interlinked to the Fortune teller, but the basic
+              idea is that you create a Soothsayer and give it a pattern that 
+              can be parsed and replaced by other things (RegExp, DOM elements).
+            </p>
+            <p>
+              The Soothsayer is not restricted by the bounds of the validator,
+              just what you pass in for the look up of the pattern. If nothing
+              is found an error is thrown.
+            </p>
+            <p>
+              To help with this we have Runes, which make it easier to work with
+              Regular Expressions.
+            </p>
+            <hr />
+            <h5>Example</h5>
+            <p>
+              The following example creates a Soothsayer and generates a possible
+              future of regular expressions.
+            </p>
+            <p>
+<pre><code>var pattern = IO(function() {
+  return '##-##-##';
+});
+var sayer = soothsayer({
+    '#': /^[0-9]/,
+    '-': /^-/
+})(pattern);</code></pre>
+            </p>
+          </dd>
+
+          <dt><h4>Guardian</h4></dt>
+          <dd>
+            <a id="learn-more-guardian"></a>
+            <p>
+              The Guardians job in the flow is to remove any items from the input
+              that you don't want to be validated by the Defender. In turn
+              guarding the Defender.
+            </p>
+            <p>
+              It's a simple premise of using a regular expression to attempt to
+              normalise the user input as much as possible, such as trimming 
+              the white space front and back or removing comments.
+            </p>
+            <hr />
+            <h5>Example</h5>
+            <p>
+              The following example creates a Guardian which will guard against
+              white space.
+            </p>
+            <p>
+<pre><code>var guard = guardian(/^\s/);</code></pre>
+            </p>
+          </dd>
+
+          <dt><h4>Defender</h4></dt>
+          <dd>
+            <a id="learn-more-defender"></a>
+            <p>
+              The Defenders job is go through the Soothsayers runes and check
+              the input against those runes. The result is either a failure or
+              a success.
+            </p>
+            <p>
+              If the result is a failure a stack trace of where the input failed
+              is passed back along with the position. This should make it easier
+              to see what failed and where.
+            </p>
+            <hr />
+            <h5>Example</h5>
+            <p>
+              The following example creates a Defender that when called uses
+              the Guardian to guard the input.
+            </p>
+            <p>
+<pre><code>var defend = defender(sayer);
+defend(guard(io));</code></pre>
+            </p>
+          </dd>
+
+          <dt><h4>Fortune Teller</h4></dt>
+          <dd>
+            <a id="learn-more-fortune"></a>
+            <p>
+              The Fortune Teller job is to decipher what the input field could
+              possibly look like on key down, before the text has been entered.
+              From there it should be possible to pipe this into the Defenders
+              to then work out if a input is permitted. 
+            </p>
+            <p>
+              The role of a Fortune Teller is highly specialized and because of
+              this a lot more information is required to do the job at hand.
+            </p>
+            <hr />
+            <h5>Example</h5>
+            <p>
+              The following uses a value of the current input field, it then
+              grabs what the event is along with any key information (unicode
+              characters etc...) and then finally the selection upon where the
+              new character needs to be added, removed etc.
+            </p>
+            <p>
+<pre><code>fortune(value)(fromEvent(e), selection);</code></pre>
+            </p>
+          </dd>
+        </dl>
+      </div>
+    </div>
+  </body>
+</html>
