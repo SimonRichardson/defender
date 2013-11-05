@@ -324,18 +324,51 @@
                       }()
                   )
               );
+
+              event(
+                  element('separated-sort-code'),
+                  'keyup',
+                  function() {
+                      var a = document.activeElement,
+                          b = a.value,
+                          c = a.getAttribute('index'), 
+                          d = parseInt(c, 10),
+                          e, f;
+
+                      if (d < 2 && b.length === 2) {
+                          e = a.parentNode.parentNode.getElementsByTagName('input'),
+                          f = [].slice.call(e);
+
+                          f[d + 1].focus();
+                      }
+                  }
+              );
           }
           create();
       });
     </script>
     <style type="text/css">
-      #separated-sort-code div, span {
+      label {
+          margin-right: 10px;
+      }
+      .separated-sort-code div,
+      .separated-sort-code span {
           float: left;
           display: inline;
           margin-right: 5px;
       }
+      .separated-sort-code label {
+          float: left;
+          display: inline;
+          margin-right: 14px;
+      }
       #separated-sort-code input {
           width: 40px;
+      }
+      .well dt {
+          padding-top: 30px;
+          margin-top: 40px;
+          border-top: 1px solid #eee;
       }
     </style>
   </head>
@@ -369,7 +402,7 @@
           <dt class="panel-heading">
               <h3 class="panel-title">Separated field</h3>
           </dt>
-          <dd class="panel-body">
+          <dd class="panel-body separated-sort-code">
             <label for="separated-sort-code">Sortcode</label> <div id="separated-sort-code"></div>
           </dd>
         </dl>
@@ -383,11 +416,128 @@
         The defender library is made of a series of modules:
         <hr />
         <ul>
-          <li>Defender</li>
-          <li>Fortune teller</li>
-          <li>Guardian</li>
-          <li>Soothsayer - with runes</li>
+          <li><a href="#learn-more-defender">Defender</a></li>
+          <li><a href="#learn-more-fortune">Fortune teller</a></li>
+          <li><a href="#learn-more-guardian">Guardian</a></li>
+          <li><a href="#learn-more-soothsayer">Soothsayer</a> - with runes</li>
         </ul>
+        <hr />
+        <p>
+          This simple premise of each of this is to make working with validation 
+          for inputs a lot easier. The comprised parts a modular in nature so
+          can be composed (or not depending on the case at hand) to enable the
+          easy chaining of state through out validation.
+        </p>
+        <dl>
+          <dt><h4>Soothsayer</h4></dt>
+          <dd>
+            <a id="learn-more-soothsayer"></a>
+            <p>
+              The Soothsayer is interlinked to the Fortune teller, but the basic
+              idea is that you create a Soothsayer and give it a pattern that 
+              can be parsed and replaced by other things (RegExp, DOM elements).
+            </p>
+            <p>
+              The Soothsayer is not restricted by the bounds of the validator,
+              just what you pass in for the look up of the pattern. If nothing
+              is found an error is thrown.
+            </p>
+            <p>
+              To help with this we have Runes, which make it easier to work with
+              Regular Expressions.
+            </p>
+            <hr />
+            <h5>Example</h5>
+            <p>
+              The following example creates a Soothsayer and generates a possible
+              future of regular expressions.
+            </p>
+            <p>
+<pre><code>var pattern = IO(function() {
+  return '##-##-##';
+});
+var sayer = soothsayer({
+    '#': /^[0-9]/,
+    '-': /^-/
+})(pattern);</code></pre>
+            </p>
+          </dd>
+
+          <dt><h4>Guardian</h4></dt>
+          <dd>
+            <a id="learn-more-guardian"></a>
+            <p>
+              The Guardians job in the flow is to remove any items from the input
+              that you don't want to be validated by the Defender. In turn
+              guarding the Defender.
+            </p>
+            <p>
+              It's a simple premise of using a regular expression to attempt to
+              normalise the user input as much as possible, such as trimming 
+              the white space front and back or removing comments.
+            </p>
+            <hr />
+            <h5>Example</h5>
+            <p>
+              The following example creates a Guardian which will guard against
+              white space.
+            </p>
+            <p>
+<pre><code>var guard = guardian(/^\s/);</code></pre>
+            </p>
+          </dd>
+
+          <dt><h4>Defender</h4></dt>
+          <dd>
+            <a id="learn-more-defender"></a>
+            <p>
+              The Defenders job is go through the Soothsayers runes and check
+              the input against those runes. The result is either a failure or
+              a success.
+            </p>
+            <p>
+              If the result is a failure a stack trace of where the input failed
+              is passed back along with the position. This should make it easier
+              to see what failed and where.
+            </p>
+            <hr />
+            <h5>Example</h5>
+            <p>
+              The following example creates a Defender that when called uses
+              the Guardian to guard the input.
+            </p>
+            <p>
+<pre><code>var defend = defender(sayer);
+defend(guard(io));</code></pre>
+            </p>
+          </dd>
+
+          <dt><h4>Fortune Teller</h4></dt>
+          <dd>
+            <a id="learn-more-fortune"></a>
+            <p>
+              The Fortune Teller job is to decipher what the input field could
+              possibly look like on key down, before the text has been entered.
+              From there it should be possible to pipe this into the Defenders
+              to then work out if a input is permitted. 
+            </p>
+            <p>
+              The role of a Fortune Teller is highly specialized and because of
+              this a lot more information is required to do the job at hand.
+            </p>
+            <hr />
+            <h5>Example</h5>
+            <p>
+              The following uses a value of the current input field, it then
+              grabs what the event is along with any key information (unicode
+              characters etc...) and then finally the selection upon where the
+              new character needs to be added, removed etc.
+            </p>
+            <p>
+<pre><code>fortune(value)(fromEvent(e), selection);</code></pre>
+            </p>
+          </dd>
+        </dl>
       </div>
     </div>
   </body>
