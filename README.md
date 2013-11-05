@@ -6,6 +6,12 @@
 
 * * *
 
+#### Demo
+
+Example of sort code validation in different guises using [defender](http://simonrichardson.github.io/defender/)
+
+* * *
+
 #### Soothsayer
 
 The Soothsayer is interlinked to the Fortune teller, but the basic
