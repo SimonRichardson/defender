@@ -5,6 +5,7 @@ var Validation = require('fantasy-validations'),
     State = require('fantasy-states'),
     Tuples = require('fantasy-tuples'),
     Either = require('fantasy-eithers'),
+    Marshal = require('./marshal'),
 
     compose = combinators.compose,
     constant = combinators.constant,
@@ -104,7 +105,7 @@ var Validation = require('fantasy-validations'),
     defender = function(sayings) {
         return function(stream) {
             var M = State.StateT(IO),
-                program = Program(State.StateT(IO));
+                program = Marshal(M);
 
             return program(M.lift(sayings))
                     .modify(constant)
@@ -116,31 +117,5 @@ var Validation = require('fantasy-validations'),
                     .exec([]);
         };
     };
-
-var Program = function(M) {
-    function Machine(a) {
-        this.program = a;
-    }
-
-    Machine.prototype.modify = function(a) {
-        return new Machine(this.program.chain(compose(M.modify)(a)));
-    };
-
-    Machine.prototype.lift = function(a) {
-        return new Machine(this.program.chain(constant(M.lift(a))));
-    };
-
-    Machine.prototype.get = function() {
-        return new Machine(this.program.chain(constant(M.get)));
-    };
-
-    Machine.prototype.exec = function(a) {
-        return this.program.exec(a);
-    };
-
-    return function(a) {
-        return new Machine(a);
-    };
-};
 
 exports = module.exports = defender;
