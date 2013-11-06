@@ -26,42 +26,43 @@ var Validation = require('fantasy-validations'),
     },
 
     consume = function(a) {
-        var string = a,
-            M = State.StateT(IO);
+        var M = State.StateT(IO);
 
         return function(b) {
-            var accum = [],
-                value,
-                match,
-                possible,
-                position,
-                i;
+            /* FIXME (Simon) : The stateT in here should be chained to the mail flow. */
+            var rec = function(index, string, accum) {
+                    var position,
+                        possible,
+                        value;
 
-            /* Re-factor this to become recursive and only perform unsafe at the end */
-            for(i = 0; i < b.length; i++) {
-                value = b[i];
+                    if (index < b.length) {
+                        value = b[index];
 
-                possible =
-                    M.lift(value)
-                    .chain(compose(M.modify)(executeExpr(string)))
-                    .chain(constant(M.get))
-                    .exec('')
-                    .unsafePerform();
-                
-                if(possible) {
-                    match = possible[0];
-                    string = string.slice(match.length);
-                } else {
-                    position = (a.length - string.length) + 1;
-                    accum.push(Tuple3(string, Maybe.Some(value), position));
-                    /* Let's move the string onwards */
-                    if (string.length < 1)
-                        break;
-                    string = string.slice(1);
-                }
-            }
+                        possible = Marshal(M)(M.lift(value))
+                            .modify(executeExpr(string))
+                            .get()
+                            .exec('')
+                            .unsafePerform();
 
-            return Tuple3(a, string, accum);
+                        if(possible) {
+                            string = string.slice(possible[0].length);
+                        } else {
+                            position = (a.length - string.length) + 1;
+                            accum.push(Tuple3(string, Maybe.Some(value), position));
+                            /* Let's move the string onwards */
+                            if (string.length < 1)
+                                return Tuple2(string, accum);
+                            string = string.slice(1);
+                        }
+
+                        return rec(index + 1, string, accum);
+                    } else {
+                        return Tuple2(string, accum);
+                    }
+                },
+                result = rec(0, a, []);
+
+            return Tuple3(a, result._1, result._2);
         };
     },
 

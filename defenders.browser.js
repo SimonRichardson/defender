@@ -880,24 +880,28 @@
           return constant(b.exec(a));
         };
       }, consume = function (a) {
-        var string = a, M = State.StateT(IO);
+        var M = State.StateT(IO);
         return function (b) {
-          var accum = [], value, match, possible, position, i;
-          for (i = 0; i < b.length; i++) {
-            value = b[i];
-            possible = M.lift(value).chain(compose(M.modify)(executeExpr(string))).chain(constant(M.get)).exec('').unsafePerform();
-            if (possible) {
-              match = possible[0];
-              string = string.slice(match.length);
-            } else {
-              position = a.length - string.length + 1;
-              accum.push(Tuple3(string, Maybe.Some(value), position));
-              if (string.length < 1)
-                break;
-              string = string.slice(1);
-            }
-          }
-          return Tuple3(a, string, accum);
+          var rec = function (index, string, accum) {
+              var position, possible, value;
+              if (index < b.length) {
+                value = b[index];
+                possible = Marshal(M)(M.lift(value)).modify(executeExpr(string)).get().exec('').unsafePerform();
+                if (possible) {
+                  string = string.slice(possible[0].length);
+                } else {
+                  position = a.length - string.length + 1;
+                  accum.push(Tuple3(string, Maybe.Some(value), position));
+                  if (string.length < 1)
+                    return Tuple2(string, accum);
+                  string = string.slice(1);
+                }
+                return rec(index + 1, string, accum);
+              } else {
+                return Tuple2(string, accum);
+              }
+            }, result = rec(0, a, []);
+          return Tuple3(a, result._1, result._2);
         };
       }, containsError = function (x) {
         var i;
