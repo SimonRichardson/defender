@@ -37,6 +37,17 @@ var IO = require('fantasy-io'),
                 );
             }
         );
+    },
+
+    readSortCodePattern = function() {
+        return IO(function() {
+            return '##-##-##';
+        });
+    },
+    readEmailPattern = function() {
+        return IO(function() {
+            return '_@_';
+        });
     };
 
 exports.defenders = {
@@ -44,7 +55,7 @@ exports.defenders = {
         var sayer = soothsayer({
                 '#': range(0, 9),
                 '-': then('-')
-            })('##-##-##'),
+            })(readSortCodePattern()),
             defend = defender(sayer),
             value = guardian(/^\s/)(readSortCode());
 
@@ -55,7 +66,7 @@ exports.defenders = {
         var sayer = soothsayer({
                 '_': anythingBut('@'),
                 '@': then('@')
-            })('_@_'),
+            })(readEmailPattern()),
             defend = defender(sayer),
             value = guardian(/^\s/)(readEmail());
 
