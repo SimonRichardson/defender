@@ -2,6 +2,7 @@ var combinators = require('fantasy-combinators'),
     IO = require('fantasy-io'),
     Maybe = require('fantasy-options'),
     State = require('fantasy-states'),
+    Marshal = require('./Marshal'),
 
     compose = combinators.compose,
     constant = combinators.constant,
@@ -69,16 +70,15 @@ var combinators = require('fantasy-combinators'),
         return function(pattern) {
             var M = State.StateT(IO),
 
-                program =
-                    M.lift(pattern)
-                    .chain(compose(M.modify)(split('')))
-                    .chain(constant(M.get))
-                    .chain(compose(M.modify)(map(sayings)))
-                    .chain(constant(M.get))
-                    .chain(compose(M.modify)(filter(isSome)))
-                    .chain(constant(M.get))
-                    .chain(compose(M.modify)(extract))
-                    .chain(constant(M.get));
+                program = Marshal(M)(M.lift(pattern))
+                    .modify(split(''))
+                    .get()
+                    .modify(map(sayings))
+                    .get()
+                    .modify(filter(isSome))
+                    .get()
+                    .modify(extract)
+                    .get();
 
             return program.exec('');
         };

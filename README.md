@@ -93,7 +93,7 @@ defend(guard(io));
 
 #### Fortune Teller
 
-The Fortune Teller job is to decipher what the input field could
+The Fortune Tellers job is to decipher what the input field could
 possibly look like on key down, before the text has been entered.
 From there it should be possible to pipe this into the Defenders
 to then work out if a input is permitted. 
@@ -113,3 +113,27 @@ new character needs to be added, removed etc.
 ```javascript
 fortune(value)(fromEvent(e), selection);
 ```
+
+* * *
+
+### Marshal
+
+Marshal is an abstraction over complexity, by relaying orders
+of a state. It's job is to simply chain orders together to form
+a coherent state (flow of states in a program) to be then run at
+a time which it sees fit.
+
+The role of the Marshal is to organize the battle field by use of
+commands. It's a specialize role the in all tense and purposes is
+for internal use only.
+
+* * *
+
+### Steward
+
+A Steward attends over the processing of a value, by looking in to
+the value, attending to it's various needs before putting the value
+back into it's original type.
+
+The role of the Steward is to preside over internal modifications
+of a value.

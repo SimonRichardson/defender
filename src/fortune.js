@@ -1,17 +1,13 @@
 var combinators = require('fantasy-combinators'),
     IO = require('fantasy-io'),
     State = require('fantasy-states'),
+    Marshal = require('./Marshal'),
+    steward = require('./steward'),
 
     ap = combinators.apply,
     compose = combinators.compose,
     constant = combinators.constant,
     identity = combinators.identity,
-
-    dimap = function(a, b) {
-        return function(c) {
-            return compose(compose(b)(c))(a);
-        };
-    },
 
     split = function(a) {
         return function(b) {
@@ -70,7 +66,7 @@ var combinators = require('fantasy-combinators'),
     inject = function(x) {
         return function(a) {
             return function(b) {
-                var list = dimap(split(''), join(''));
+                var list = steward(split(''), join(''));
                 return list(replace(a))(b);
             };
         };
@@ -92,26 +88,24 @@ var combinators = require('fantasy-combinators'),
         return function(key, selection) {
             var M = State.StateT(IO),
 
-                values =
-                    M.lift(key)
-                    .chain(compose(M.modify)(constant))
-                    .chain(constant(M.get))
-                    .chain(compose(M.modify)(inject))
-                    .chain(constant(M.get)),
+                values = Marshal(M)(M.lift(key))
+                    .modify(constant)
+                    .get()
+                    .modify(inject)
+                    .get(),
 
                 possible = values.exec(''),
 
-                fortune =
-                    M.lift(io)
-                    .chain(compose(M.modify)(constant))
-                    .chain(constant(M.lift(selection)))
-                    .chain(compose(M.modify)(together))
-                    .chain(constant(M.get))
-                    .chain(constant(M.lift(possible)))
-                    .chain(compose(M.modify)(ap))
-                    .chain(constant(M.get))
-                    .chain(compose(M.modify)(extract))
-                    .chain(constant(M.get));
+                fortune = Marshal(M)(M.lift(io))
+                    .modify(constant)
+                    .lift(selection)
+                    .modify(together)
+                    .get()
+                    .lift(possible)
+                    .modify(ap)
+                    .get()
+                    .modify(extract)
+                    .get();
 
             return fortune.exec('');
         };

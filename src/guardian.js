@@ -1,17 +1,13 @@
 var combinators = require('fantasy-combinators'),
     IO = require('fantasy-io'),
     State = require('fantasy-states'),
+    Marshal = require('./Marshal'),
+    steward = require('./steward'),
 
     ap = combinators.apply,
     compose = combinators.compose,
     constant = combinators.constant,
     
-    dimap = function(a, b) {
-        return function(c) {
-            return compose(compose(b)(c))(a);
-        };
-    },
-
     split = function(a) {
         return function(b) {
             return b.split(a);
@@ -36,7 +32,7 @@ var combinators = require('fantasy-combinators'),
     },
     every = function(f) {
         return function(x) {
-            return dimap(split(''), join(''))(f)(x);
+            return steward(split(''), join(''))(f)(x);
         };
     },
     not = function(a) {
@@ -55,14 +51,11 @@ var combinators = require('fantasy-combinators'),
                 predicate = compose(not)(test(regexp)),
                 clean = ap(every(filter(predicate))),
 
-                program =
-                    M.lift(f)
-                    .chain(compose(M.modify)(
-                        function(a) {
-                            return constant(clean(a));
-                        }
-                    ))
-                    .chain(constant(M.get));
+                program = Marshal(M)(M.lift(f))
+                    .modify(function(a) {
+                        return  constant(clean(a));
+                    })
+                    .get();
 
             return program.exec('');
         };
