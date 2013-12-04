@@ -5,7 +5,6 @@ var Validation = require('fantasy-validations'),
     State = require('fantasy-states'),
     Tuples = require('fantasy-tuples'),
     Either = require('fantasy-eithers'),
-    Marshal = require('./marshal'),
 
     compose = combinators.compose,
     constant = combinators.constant,
@@ -38,9 +37,9 @@ var Validation = require('fantasy-validations'),
                     if (index < b.length) {
                         value = b[index];
 
-                        possible = Marshal(M)(M.lift(value))
-                            .modify(executeExpr(string))
-                            .get()
+                        possible = M.lift(value)
+                            .chain(compose(M.modify)(executeExpr(string)))
+                            .chain(constant(M.get))
                             .exec('')
                             .unsafePerform();
 
@@ -106,16 +105,16 @@ var Validation = require('fantasy-validations'),
     defender = function(sayings) {
         return function(stream) {
             var M = State.StateT(IO),
-                program = Marshal(M);
-
-            return program(M.lift(sayings))
-                    .modify(constant)
-                    .lift(stream)
-                    .modify(consume)
-                    .get()
-                    .modify(output)
-                    .get()
-                    .exec([]);
+                program =
+                    M.lift(sayings)
+                    .chain(compose(M.modify)(constant))
+                    .chain(constant(M.lift(stream)))
+                    .chain(compose(M.modify)(consume))
+                    .chain(constant(M.get))
+                    .chain(compose(M.modify)(output))
+                    .chain(constant(M.get));
+                    
+            return program.exec([]);
         };
     };
 

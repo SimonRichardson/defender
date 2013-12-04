@@ -116,19 +116,6 @@ fortune(value)(fromEvent(e), selection);
 
 * * *
 
-### Marshal
-
-Marshal is an abstraction over complexity, by relaying orders
-of a state. It's job is to simply chain orders together to form
-a coherent state (flow of states in a program) to be then run at
-a time which it sees fit.
-
-The role of the Marshal is to organize the battle field by use of
-commands. It's a specialize role the in all tense and purposes is
-for internal use only.
-
-* * *
-
 ### Steward
 
 A Steward attends over the processing of a value, by looking in to

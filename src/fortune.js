@@ -1,7 +1,6 @@
 var combinators = require('fantasy-combinators'),
     IO = require('fantasy-io'),
     State = require('fantasy-states'),
-    Marshal = require('./Marshal'),
     steward = require('./steward'),
 
     ap = combinators.apply,
@@ -87,26 +86,28 @@ var combinators = require('fantasy-combinators'),
     fortune = function(io) {
         return function(key, selection) {
             var M = State.StateT(IO),
-
-                values = Marshal(M)(M.lift(key))
-                    .modify(constant)
-                    .get()
-                    .modify(inject)
-                    .get(),
-
+ 
+                values =
+                    M.lift(key)
+                    .chain(compose(M.modify)(constant))
+                    .chain(constant(M.get))
+                    .chain(compose(M.modify)(inject))
+                    .chain(constant(M.get)),
+ 
                 possible = values.exec(''),
-
-                fortune = Marshal(M)(M.lift(io))
-                    .modify(constant)
-                    .lift(selection)
-                    .modify(together)
-                    .get()
-                    .lift(possible)
-                    .modify(ap)
-                    .get()
-                    .modify(extract)
-                    .get();
-
+ 
+                fortune =
+                    M.lift(io)
+                    .chain(compose(M.modify)(constant))
+                    .chain(constant(M.lift(selection)))
+                    .chain(compose(M.modify)(together))
+                    .chain(constant(M.get))
+                    .chain(constant(M.lift(possible)))
+                    .chain(compose(M.modify)(ap))
+                    .chain(constant(M.get))
+                    .chain(compose(M.modify)(extract))
+                    .chain(constant(M.get));
+ 
             return fortune.exec('');
         };
     };

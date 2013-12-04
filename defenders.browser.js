@@ -167,7 +167,7 @@
     }));
   });
   require.define('/src/soothsayer.js', function (module, exports, __dirname, __filename) {
-    var combinators = require('/node_modules/fantasy-combinators/combinators.js', module), IO = require('/node_modules/fantasy-io/io.js', module), Maybe = require('/node_modules/fantasy-options/option.js', module), State = require('/node_modules/fantasy-states/state.js', module), Marshal = require('/src/Marshal.js', module), compose = combinators.compose, constant = combinators.constant, identity = combinators.identity, isSome = function (a) {
+    var combinators = require('/node_modules/fantasy-combinators/combinators.js', module), IO = require('/node_modules/fantasy-io/io.js', module), Maybe = require('/node_modules/fantasy-options/option.js', module), State = require('/node_modules/fantasy-states/state.js', module), compose = combinators.compose, constant = combinators.constant, identity = combinators.identity, isSome = function (a) {
         return a.cata({
           Some: constant(true),
           None: constant(false)
@@ -212,162 +212,11 @@
         };
       }, soothsayer = function (sayings) {
         return function (pattern) {
-          var M = State.StateT(IO), program = Marshal(M)(M.lift(pattern)).modify(split('')).get().modify(map(sayings)).get().modify(filter(isSome)).get().modify(extract).get();
+          var M = State.StateT(IO), program = M.lift(pattern).chain(compose(M.modify)(split(''))).chain(constant(M.get)).chain(compose(M.modify)(map(sayings))).chain(constant(M.get)).chain(compose(M.modify)(filter(isSome))).chain(constant(M.get)).chain(compose(M.modify)(extract)).chain(constant(M.get));
           return program.exec('');
         };
       };
     exports = module.exports = soothsayer;
-  });
-  require.define('/src/Marshal.js', function (module, exports, __dirname, __filename) {
-    var daggy = require('/node_modules/daggy/daggy.js', module), combinators = require('/node_modules/fantasy-combinators/combinators.js', module), compose = combinators.compose, constant = combinators.constant;
-    var Marshal = function (M) {
-      var Orders = daggy.tagged('run');
-      Orders.prototype.modify = function (a) {
-        return Orders(this.run.chain(compose(M.modify)(a)));
-      };
-      Orders.prototype.lift = function (a) {
-        return Orders(this.run.chain(constant(M.lift(a))));
-      };
-      Orders.prototype.get = function () {
-        return Orders(this.run.chain(constant(M.get)));
-      };
-      Orders.prototype.exec = function (a) {
-        return this.run.exec(a);
-      };
-      return Orders;
-    };
-    exports = module.exports = Marshal;
-  });
-  require.define('/node_modules/fantasy-combinators/combinators.js', function (module, exports, __dirname, __filename) {
-    function apply(f) {
-      return function (x) {
-        return f(x);
-      };
-    }
-    function compose(f) {
-      return function (g) {
-        return function (x) {
-          return f(g(x));
-        };
-      };
-    }
-    function constant(a) {
-      return function (b) {
-        return a;
-      };
-    }
-    function fix(f) {
-      function g(h) {
-        return function (x) {
-          return f(h(h))(x);
-        };
-      }
-      ;
-      return g(g);
-    }
-    function flip(f) {
-      return function (a) {
-        return function (b) {
-          return f(b)(a);
-        };
-      };
-    }
-    function identity(a) {
-      return a;
-    }
-    function substitution(f) {
-      return function (g) {
-        return function (x) {
-          f(x)(g(x));
-        };
-      };
-    }
-    function thrush(x) {
-      return function (f) {
-        return f(x);
-      };
-    }
-    if (typeof module != 'undefined')
-      module.exports = {
-        apply: apply,
-        compose: compose,
-        constant: constant,
-        fix: fix,
-        flip: flip,
-        identity: identity,
-        substitution: substitution,
-        thrush: thrush
-      };
-  });
-  require.define('/node_modules/daggy/daggy.js', function (module, exports, __dirname, __filename) {
-    (function (global, factory) {
-      'use strict';
-      if (typeof define === 'function' && define.amd) {
-        define(['exports'], factory);
-      } else if (typeof exports !== 'undefined') {
-        factory(exports);
-      } else {
-        global.daggy = {};
-        factory(global.daggy);
-      }
-    }(this, function (exports) {
-      function create(proto) {
-        function Ctor() {
-        }
-        Ctor.prototype = proto;
-        return new Ctor;
-      }
-      exports.create = create;
-      function getInstance(self, constructor) {
-        return self instanceof constructor ? self : create(constructor.prototype);
-      }
-      exports.getInstance = getInstance;
-      function tagged() {
-        var fields = [].slice.apply(arguments);
-        function wrapped() {
-          var self = getInstance(this, wrapped), i;
-          if (arguments.length != fields.length)
-            throw new TypeError('Expected ' + fields.length + ' arguments, got ' + arguments.length);
-          for (i = 0; i < fields.length; i++)
-            self[fields[i]] = arguments[i];
-          return self;
-        }
-        wrapped._length = fields.length;
-        return wrapped;
-      }
-      exports.tagged = tagged;
-      function taggedSum(constructors) {
-        var key;
-        function definitions() {
-          throw new TypeError('Tagged sum was called instead of one of its properties.');
-        }
-        function makeCata(key) {
-          return function (dispatches) {
-            var fields = constructors[key], args = [], i;
-            if (!dispatches[key])
-              throw new TypeError("Constructors given to cata didn't include: " + key);
-            for (i = 0; i < fields.length; i++)
-              args.push(this[fields[i]]);
-            return dispatches[key].apply(this, args);
-          };
-        }
-        function makeProto(key) {
-          var proto = create(definitions.prototype);
-          proto.cata = makeCata(key);
-          return proto;
-        }
-        for (key in constructors) {
-          if (!constructors[key].length) {
-            definitions[key] = makeProto(key);
-            continue;
-          }
-          definitions[key] = tagged.apply(null, constructors[key]);
-          definitions[key].prototype = makeProto(key);
-        }
-        return definitions;
-      }
-      exports.taggedSum = taggedSum;
-    }));
   });
   require.define('/node_modules/fantasy-states/state.js', function (module, exports, __dirname, __filename) {
     var Tuple2 = require('/node_modules/fantasy-tuples/tuples.js', module).Tuple2, daggy = require('/node_modules/fantasy-states/node_modules/daggy/daggy.js', module), State = daggy.tagged('run');
@@ -759,8 +608,69 @@
       exports.taggedSum = taggedSum;
     }));
   });
+  require.define('/node_modules/fantasy-combinators/combinators.js', function (module, exports, __dirname, __filename) {
+    function apply(f) {
+      return function (x) {
+        return f(x);
+      };
+    }
+    function compose(f) {
+      return function (g) {
+        return function (x) {
+          return f(g(x));
+        };
+      };
+    }
+    function constant(a) {
+      return function (b) {
+        return a;
+      };
+    }
+    function fix(f) {
+      function g(h) {
+        return function (x) {
+          return f(h(h))(x);
+        };
+      }
+      ;
+      return g(g);
+    }
+    function flip(f) {
+      return function (a) {
+        return function (b) {
+          return f(b)(a);
+        };
+      };
+    }
+    function identity(a) {
+      return a;
+    }
+    function substitution(f) {
+      return function (g) {
+        return function (x) {
+          f(x)(g(x));
+        };
+      };
+    }
+    function thrush(x) {
+      return function (f) {
+        return f(x);
+      };
+    }
+    if (typeof module != 'undefined')
+      module.exports = {
+        apply: apply,
+        compose: compose,
+        constant: constant,
+        fix: fix,
+        flip: flip,
+        identity: identity,
+        substitution: substitution,
+        thrush: thrush
+      };
+  });
   require.define('/src/guardian.js', function (module, exports, __dirname, __filename) {
-    var combinators = require('/node_modules/fantasy-combinators/combinators.js', module), IO = require('/node_modules/fantasy-io/io.js', module), State = require('/node_modules/fantasy-states/state.js', module), Marshal = require('/src/Marshal.js', module), steward = require('/src/steward.js', module), ap = combinators.apply, compose = combinators.compose, constant = combinators.constant, split = function (a) {
+    var combinators = require('/node_modules/fantasy-combinators/combinators.js', module), IO = require('/node_modules/fantasy-io/io.js', module), State = require('/node_modules/fantasy-states/state.js', module), steward = require('/src/steward.js', module), ap = combinators.apply, compose = combinators.compose, constant = combinators.constant, split = function (a) {
         return function (b) {
           return b.split(a);
         };
@@ -789,9 +699,9 @@
         };
       }, normalise = function (regexp) {
         return function (f) {
-          var M = State.StateT(IO), predicate = compose(not)(test(regexp)), clean = ap(every(filter(predicate))), program = Marshal(M)(M.lift(f)).modify(function (a) {
+          var M = State.StateT(IO), predicate = compose(not)(test(regexp)), clean = ap(every(filter(predicate))), program = M.lift(f).chain(compose(M.modify)(function (a) {
               return constant(clean(a));
-            }).get();
+            })).chain(constant(M.get));
           return program.exec('');
         };
       };
@@ -806,7 +716,7 @@
     exports = module.exports = steward;
   });
   require.define('/src/fortune.js', function (module, exports, __dirname, __filename) {
-    var combinators = require('/node_modules/fantasy-combinators/combinators.js', module), IO = require('/node_modules/fantasy-io/io.js', module), State = require('/node_modules/fantasy-states/state.js', module), Marshal = require('/src/Marshal.js', module), steward = require('/src/steward.js', module), ap = combinators.apply, compose = combinators.compose, constant = combinators.constant, identity = combinators.identity, split = function (a) {
+    var combinators = require('/node_modules/fantasy-combinators/combinators.js', module), IO = require('/node_modules/fantasy-io/io.js', module), State = require('/node_modules/fantasy-states/state.js', module), steward = require('/src/steward.js', module), ap = combinators.apply, compose = combinators.compose, constant = combinators.constant, identity = combinators.identity, split = function (a) {
         return function (b) {
           return [
             b[0].split(a),
@@ -868,14 +778,14 @@
         };
       }, fortune = function (io) {
         return function (key, selection) {
-          var M = State.StateT(IO), values = Marshal(M)(M.lift(key)).modify(constant).get().modify(inject).get(), possible = values.exec(''), fortune = Marshal(M)(M.lift(io)).modify(constant).lift(selection).modify(together).get().lift(possible).modify(ap).get().modify(extract).get();
+          var M = State.StateT(IO), values = M.lift(key).chain(compose(M.modify)(constant)).chain(constant(M.get)).chain(compose(M.modify)(inject)).chain(constant(M.get)), possible = values.exec(''), fortune = M.lift(io).chain(compose(M.modify)(constant)).chain(constant(M.lift(selection))).chain(compose(M.modify)(together)).chain(constant(M.get)).chain(constant(M.lift(possible))).chain(compose(M.modify)(ap)).chain(constant(M.get)).chain(compose(M.modify)(extract)).chain(constant(M.get));
           return fortune.exec('');
         };
       };
     exports = module.exports = fortune;
   });
   require.define('/src/defender.js', function (module, exports, __dirname, __filename) {
-    var Validation = require('/node_modules/fantasy-validations/validation.js', module), combinators = require('/node_modules/fantasy-combinators/combinators.js', module), IO = require('/node_modules/fantasy-io/io.js', module), Maybe = require('/node_modules/fantasy-options/option.js', module), State = require('/node_modules/fantasy-states/state.js', module), Tuples = require('/node_modules/fantasy-tuples/tuples.js', module), Either = require('/node_modules/fantasy-eithers/either.js', module), Marshal = require('/src/marshal.js', module), compose = combinators.compose, constant = combinators.constant, Success = Validation.Success, Failure = Validation.Failure, Left = Either.Left, Right = Either.Right, Tuple2 = Tuples.Tuple2, Tuple3 = Tuples.Tuple3, executeExpr = function (a) {
+    var Validation = require('/node_modules/fantasy-validations/validation.js', module), combinators = require('/node_modules/fantasy-combinators/combinators.js', module), IO = require('/node_modules/fantasy-io/io.js', module), Maybe = require('/node_modules/fantasy-options/option.js', module), State = require('/node_modules/fantasy-states/state.js', module), Tuples = require('/node_modules/fantasy-tuples/tuples.js', module), Either = require('/node_modules/fantasy-eithers/either.js', module), compose = combinators.compose, constant = combinators.constant, Success = Validation.Success, Failure = Validation.Failure, Left = Either.Left, Right = Either.Right, Tuple2 = Tuples.Tuple2, Tuple3 = Tuples.Tuple3, executeExpr = function (a) {
         return function (b) {
           return constant(b.exec(a));
         };
@@ -886,7 +796,7 @@
               var position, possible, value;
               if (index < b.length) {
                 value = b[index];
-                possible = Marshal(M)(M.lift(value)).modify(executeExpr(string)).get().exec('').unsafePerform();
+                possible = M.lift(value).chain(compose(M.modify)(executeExpr(string))).chain(constant(M.get)).exec('').unsafePerform();
                 if (possible) {
                   string = string.slice(possible[0].length);
                 } else {
@@ -927,31 +837,11 @@
         };
       }, defender = function (sayings) {
         return function (stream) {
-          var M = State.StateT(IO), program = Marshal(M);
-          return program(M.lift(sayings)).modify(constant).lift(stream).modify(consume).get().modify(output).get().exec([]);
+          var M = State.StateT(IO), program = M.lift(sayings).chain(compose(M.modify)(constant)).chain(constant(M.lift(stream))).chain(compose(M.modify)(consume)).chain(constant(M.get)).chain(compose(M.modify)(output)).chain(constant(M.get));
+          return program.exec([]);
         };
       };
     exports = module.exports = defender;
-  });
-  require.define('/src/marshal.js', function (module, exports, __dirname, __filename) {
-    var daggy = require('/node_modules/daggy/daggy.js', module), combinators = require('/node_modules/fantasy-combinators/combinators.js', module), compose = combinators.compose, constant = combinators.constant;
-    var Marshal = function (M) {
-      var Orders = daggy.tagged('run');
-      Orders.prototype.modify = function (a) {
-        return Orders(this.run.chain(compose(M.modify)(a)));
-      };
-      Orders.prototype.lift = function (a) {
-        return Orders(this.run.chain(constant(M.lift(a))));
-      };
-      Orders.prototype.get = function () {
-        return Orders(this.run.chain(constant(M.get)));
-      };
-      Orders.prototype.exec = function (a) {
-        return this.run.exec(a);
-      };
-      return Orders;
-    };
-    exports = module.exports = Marshal;
   });
   require.define('/node_modules/fantasy-eithers/either.js', function (module, exports, __dirname, __filename) {
     var daggy = require('/node_modules/fantasy-eithers/node_modules/daggy/daggy.js', module), Either = daggy.taggedSum({
@@ -1200,3 +1090,4 @@
   });
   global.defenders = require('/defenders.js');
 }.call(this, this));
+//# sourceMappingURL=defenders.js.map

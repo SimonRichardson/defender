@@ -1,7 +1,6 @@
 var combinators = require('fantasy-combinators'),
     IO = require('fantasy-io'),
     State = require('fantasy-states'),
-    Marshal = require('./Marshal'),
     steward = require('./steward'),
 
     ap = combinators.apply,
@@ -51,11 +50,13 @@ var combinators = require('fantasy-combinators'),
                 predicate = compose(not)(test(regexp)),
                 clean = ap(every(filter(predicate))),
 
-                program = Marshal(M)(M.lift(f))
-                    .modify(function(a) {
-                        return  constant(clean(a));
-                    })
-                    .get();
+                program = M.lift(f)
+                    .chain(compose(M.modify)(
+                        function(a) {
+                            return constant(clean(a));
+                        }
+                    ))
+                    .chain(constant(M.get));
 
             return program.exec('');
         };
