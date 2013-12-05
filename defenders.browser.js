@@ -792,26 +792,16 @@
       }, consume = function (a) {
         var M = State.StateT(IO);
         return function (b) {
-          var rec = function (index, string, accum) {
-              var position, possible, value;
-              if (index < b.length) {
-                value = b[index];
-                possible = M.lift(value).chain(compose(M.modify)(executeExpr(string))).chain(constant(M.get)).exec('').unsafePerform();
-                if (possible) {
-                  string = string.slice(possible[0].length);
-                } else {
-                  position = a.length - string.length + 1;
-                  accum.push(Tuple3(string, Maybe.Some(value), position));
-                  if (string.length < 1)
-                    return Tuple2(string, accum);
-                  string = string.slice(1);
-                }
-                return rec(index + 1, string, accum);
-              } else {
-                return Tuple2(string, accum);
-              }
-            }, result = rec(0, a, []);
-          return Tuple3(a, result._1, result._2);
+          var rec = function (index, string, program) {
+            if (index < b.length) {
+              return rec(index + 1, program.chain(constant(M.lift(b[index]))).chain(compose(M.modify)(executeExpr(string))));
+            } else {
+              return program;
+            }
+          };
+          result = rec(0, a, M.of(''));
+          console.log(result.exec('').unsafePerform());
+          return Tuple3(a, '', '');
         };
       }, containsError = function (x) {
         var i;

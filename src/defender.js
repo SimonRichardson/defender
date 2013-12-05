@@ -24,44 +24,42 @@ var Validation = require('fantasy-validations'),
         };
     },
 
+    validateString = function(string) {
+        if(possible) {
+            string = string.slice(possible[0].length);
+        } else {
+            position = (a.length - string.length) + 1;
+            accum.push(Tuple3(string, Maybe.Some(value), position));
+            /* Let's move the string onwards */
+            if (string.length < 1)
+                return Tuple2(string, accum);
+            string = string.slice(1);
+        }
+    },
+
     consume = function(a) {
         var M = State.StateT(IO);
 
         return function(b) {
-            /* FIXME (Simon) : The stateT in here should be chained to the mail flow. */
-            var rec = function(index, string, accum) {
-                    var position,
-                        possible,
-                        value;
-
+            var rec = function(index, program) {
+                return function(string) {
                     if (index < b.length) {
-                        value = b[index];
-
-                        possible = M.lift(value)
-                            .chain(compose(M.modify)(executeExpr(string)))
-                            .chain(constant(M.get))
-                            .exec('')
-                            .unsafePerform();
-
-                        if(possible) {
-                            string = string.slice(possible[0].length);
-                        } else {
-                            position = (a.length - string.length) + 1;
-                            accum.push(Tuple3(string, Maybe.Some(value), position));
-                            /* Let's move the string onwards */
-                            if (string.length < 1)
-                                return Tuple2(string, accum);
-                            string = string.slice(1);
-                        }
-
-                        return rec(index + 1, string, accum);
+                        return program
+                                .chain(constant(M.lift(b[index])))
+                                .chain(constant(M.modify)(executeExpr(string)))
+                                .chain(constant(M.get))
+                                .chain(constant(M.modify)(validateString))
+                                .chain(constant(M.get))
+                                .chain(constant(M.modify)(rec(index + 1, program)));
                     } else {
-                        return Tuple2(string, accum);
+                        return program;
                     }
-                },
-                result = rec(0, a, []);
+                };
+            };
+            result = rec(0, M.of(''))(a);
+            console.log(result.exec('').unsafePerform());
 
-            return Tuple3(a, result._1, result._2);
+            return Tuple3(a, '', '');
         };
     },
 
