@@ -6,6 +6,19 @@
 
 * * *
 
+### Build
+
+#### Browser 
+
+You have a lot of alternatives (requirejs, AMD), but to get started
+quickly you can use [commonjseverywhere](https://github.com/michaelficarra/commonjs-everywhere).
+
+```
+cjsify defenders.js --no-node --export defenders --source-map defenders.browser.js.map >defenders.browser.js
+```
+
+* * *
+
 #### Demo
 
 Example of sort code validation in different guises using [defender](http://simonrichardson.github.io/defender/)
