@@ -28,15 +28,11 @@ var IO = require('fantasy-io'),
     },
 
     isSuccessful = function(a) {
-        return a.fold(
-            constant(false),
-            function(x) {
-                return x.fold(
-                    constant(false),
-                    constant(true)
-                );
-            }
-        );
+        return a.cata({
+            Success: constant(true),
+            Maybe: constant(false),
+            Failure: constant(false)
+        });
     },
 
     readSortCodePattern = function() {

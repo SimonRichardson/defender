@@ -817,7 +817,7 @@
       }, consume = function (a) {
         var M = State.StateT(IO), rec = function (index, guards) {
             return function (tuple) {
-              var program = tuple._1, original = tuple._2, modified = original.length >= 1 ? original.slice(index) : original, maybes = tuple._4, guard;
+              var program = tuple._1, original = tuple._2, modified = tuple._3, maybes = tuple._4, guard;
               if (index < guards.length) {
                 guard = guards[index];
                 return program.chain(constant(M.lift(guard))).chain(compose(M.modify)(executeExpr(modified))).chain(constant(M.get)).chain(compose(M.modify)(validateString(program, index, maybes, original, modified))).chain(constant(M.get)).chain(rec(index + 1, guards));
@@ -827,7 +827,7 @@
             };
           };
         return function (b) {
-          return rec(0, b)(Tuple4(M.of(''), a, '', []));
+          return rec(0, b)(Tuple4(M.of(''), a, a, []));
         };
       }, contains = function (x, f) {
         var i;

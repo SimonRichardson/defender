@@ -64,7 +64,7 @@ var combinators = require('fantasy-combinators'),
                 return function(tuple) {
                     var program = tuple._1,
                         original = tuple._2,
-                        modified = original.length >= 1 ? original.slice(index) : original,
+                        modified = tuple._3,
                         maybes = tuple._4,
                         guard;
 
@@ -84,7 +84,7 @@ var combinators = require('fantasy-combinators'),
                 };
             };
         return function(b) {
-            return rec(0, b)(Tuple4(M.of(''), a, '', []));
+            return rec(0, b)(Tuple4(M.of(''), a, a, []));
         };
     },
 
