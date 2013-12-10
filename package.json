@@ -29,6 +29,7 @@
     "scripts": {
         "test": "grunt"
     },
+    "files": ["defenders.js", "src/*.js"],
     "main": "src/server.js",
     "version": "0.1.1"
 }
